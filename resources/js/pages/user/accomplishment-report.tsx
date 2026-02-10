@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -13,8 +13,6 @@ import AppLayout from '@/layouts/app-layout';
 import { accomplishmentReport, userDashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
-
-
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: userDashboard().url },
     { title: 'Accomplishment Report', href: accomplishmentReport().url },
@@ -22,14 +20,41 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 function generateDays(start: Date, end: Date) {
     const days: Date[] = [];
-    const current = new Date(start);
 
-    while (current <= end) {
+    const current = new Date(
+        start.getFullYear(),
+        start.getMonth(),
+        start.getDate(),
+    );
+
+    const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+    while (current <= last) {
         days.push(new Date(current));
         current.setDate(current.getDate() + 1);
     }
 
     return days;
+}
+
+function isDateInRange(date: Date, start: Date, end: Date) {
+    return date >= start && date <= end;
+}
+
+function groupArchivedReports(reports: Report[]) {
+    const map: Record<number, Record<number, Report[]>> = {};
+
+    reports.forEach((report) => {
+        const year = report.startDate.getFullYear();
+        const month = report.startDate.getMonth(); // 0–11
+
+        if (!map[year]) map[year] = {};
+        if (!map[year][month]) map[year][month] = [];
+
+        map[year][month].push(report);
+    });
+
+    return map;
 }
 
 type Report = {
@@ -50,9 +75,24 @@ export default function AccomplishmentReport() {
     const [open, setOpen] = useState(false);
     const [range, setRange] = useState<DateRange | undefined>();
 
-    /** archive filters */
-    const [archiveYear, setArchiveYear] = useState<number | 'all'>('all');
-    const [archiveMonth, setArchiveMonth] = useState<number | 'all'>('all');
+    const [openYear, setOpenYear] = useState<number | null>(null);
+    const [openMonth, setOpenMonth] = useState<number | null>(null);
+
+    const [yearSearch, setYearSearch] = useState('');
+    const [monthSearch, setMonthSearch] = useState('');
+
+    const groupedArchived = useMemo(
+        () => groupArchivedReports(archivedReports),
+        [archivedReports],
+    );
+
+    const disabledDates = useMemo(
+        () => (date: Date) =>
+            reports.some((report) =>
+                isDateInRange(date, report.startDate, report.endDate),
+            ),
+        [reports],
+    );
 
     const addReport = () => {
         if (!range?.from || !range?.to) return;
@@ -88,23 +128,53 @@ export default function AccomplishmentReport() {
         setReports((prev) => [...prev, report]);
     };
 
-    const expandedReport = reports.find(
-        (report) => report.id === expandedReportId,
+    const expandedReport = useMemo(
+        () => reports.find((r) => r.id === expandedReportId),
+        [reports, expandedReportId],
     );
 
-    const filteredArchivedReports = archivedReports.filter((report) => {
-        const year = report.startDate.getFullYear();
-        const month = report.startDate.getMonth() + 1;
+    function matchesYearSearch(search: string, year: number) {
+        if (!search.trim()) return true;
+        return year.toString().includes(search.trim());
+    }
 
-        if (archiveYear !== 'all' && year !== archiveYear) return false;
-        if (archiveMonth !== 'all' && month !== archiveMonth) return false;
+    function matchesMonthSearch(search: string, year: number, month: number) {
+        if (!search.trim()) return true;
 
-        return true;
-    });
+        const monthName = format(
+            new Date(year, month, 1),
+            'MMMM',
+        ).toLowerCase();
 
-    const archiveYears = Array.from(
-        new Set(archivedReports.map((r) => r.startDate.getFullYear())),
-    ).sort((a, b) => b - a);
+        return monthName.includes(search.toLowerCase().trim());
+    }
+
+    useEffect(() => {
+        if (!yearSearch && !monthSearch) return;
+
+        for (const [year, months] of Object.entries(groupedArchived)) {
+            const yearNumber = Number(year);
+
+            if (!matchesYearSearch(yearSearch, yearNumber)) continue;
+
+            // Open the matching year
+            setOpenYear(yearNumber);
+
+            for (const month of Object.keys(months)) {
+                const monthNumber = Number(month);
+
+                if (matchesMonthSearch(monthSearch, yearNumber, monthNumber)) {
+                    // Open the matching month
+                    setOpenMonth(monthNumber);
+                    return;
+                }
+            }
+
+            // If year matches but no month search, just open year
+            setOpenMonth(null);
+            return;
+        }
+    }, [yearSearch, monthSearch]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -129,6 +199,7 @@ export default function AccomplishmentReport() {
                                     selected={range}
                                     onSelect={setRange}
                                     numberOfMonths={1}
+                                    disabled={disabledDates}
                                 />
 
                                 <div className="mt-3 flex items-center justify-between gap-2">
@@ -253,82 +324,189 @@ export default function AccomplishmentReport() {
                     </div>
                 )}
 
-                {/* Archived reports with filters */}
+                {/* Archived reports – Folder view */}
                 {archivedReports.length > 0 && (
                     <div className="mt-8 max-w-xl">
                         <h2 className="mb-3 text-lg font-semibold">
                             Archived Reports
                         </h2>
+                        <div className="mb-3 grid grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Year
+                                </label>
+                                <input
+                                    type="text"
+                                    value={yearSearch}
+                                    onChange={(e) => setYearSearch(e.target.value)}
+                                    placeholder="e.g. 2026"
+                                    className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                />
+                            </div>
 
-                        {/* Filters */}
-                        <div className="mb-3 flex gap-2">
-                            <select
-                                value={archiveYear}
-                                onChange={(e) =>
-                                    setArchiveYear(
-                                        e.target.value === 'all'
-                                            ? 'all'
-                                            : Number(e.target.value),
-                                    )
-                                }
-                                className="rounded-md border px-2 py-1 text-sm"
-                            >
-                                <option value="all">All Years</option>
-                                {archiveYears.map((year) => (
-                                    <option key={year} value={year}>
-                                        {year}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <select
-                                value={archiveMonth}
-                                onChange={(e) =>
-                                    setArchiveMonth(
-                                        e.target.value === 'all'
-                                            ? 'all'
-                                            : Number(e.target.value),
-                                    )
-                                }
-                                className="rounded-md border px-2 py-1 text-sm"
-                            >
-                                <option value="all">All Months</option>
-                                {Array.from({ length: 12 }).map((_, i) => (
-                                    <option key={i} value={i + 1}>
-                                        {format(new Date(2026, i, 1), 'MMMM')}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Month
+                                </label>
+                                <input
+                                    type="text"
+                                    value={monthSearch}
+                                    onChange={(e) => setMonthSearch(e.target.value)}
+                                    placeholder="e.g. Feb"
+                                    className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                />
+                            </div>
                         </div>
 
-                        {/* Archived list — SAME FORMAT AS ACTIVE (no dropdown icon) */}
-                        <div className="grid grid-cols-2 gap-3">
-                            {filteredArchivedReports.map((report) => (
-                                <div
-                                    key={report.id}
-                                    className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-semibold"
-                                >
-                                    <div className="flex flex-1 items-center">
-                                        <span>
-                                            {format(report.startDate, 'MMM dd')}{' '}
-                                            –{' '}
-                                            {format(
-                                                report.endDate,
-                                                'MMM dd, yyyy',
-                                            )}
-                                        </span>
-                                    </div>
+                        <div className="space-y-2">
+                            {Object.entries(groupedArchived)
+                                .sort((a, b) => Number(b[0]) - Number(a[0]))
+                                .filter(([year]) =>
+                                    matchesYearSearch(yearSearch, Number(year)),
+                                )
+                                .map(([year, months]) => {
+                                    const yearNumber = Number(year);
+                                    const yearOpen = openYear === yearNumber;
 
-                                    <button
-                                        onClick={() =>
-                                            retrieveReport(report.id)
-                                        }
-                                        className="ml-3 text-xs font-medium text-primary hover:underline"
-                                    >
-                                        Retrieve
-                                    </button>
-                                </div>
-                            ))}
+                                    return (
+                                        <div
+                                            key={year}
+                                            className="rounded-md border"
+                                        >
+                                            {/* YEAR */}
+                                            <button
+                                                onClick={() =>
+                                                    setOpenYear(
+                                                        yearOpen
+                                                            ? null
+                                                            : yearNumber,
+                                                    )
+                                                }
+                                                className="flex w-full items-center justify-between px-3 py-2 text-sm font-semibold"
+                                            >
+                                                📁 {year}
+                                                <span>
+                                                    {yearOpen ? '▲' : '▼'}
+                                                </span>
+                                            </button>
+
+                                            {/* MONTHS */}
+                                            {yearOpen && (
+                                                <div className="border-t">
+                                                    {Object.entries(
+                                                        months as Record<
+                                                            number,
+                                                            Report[]
+                                                        >,
+                                                    )
+                                                        .sort(
+                                                            (a, b) =>
+                                                                Number(a[0]) -
+                                                                Number(b[0]),
+                                                        ) // ascending months
+                                                        .filter(([month]) =>
+                                                            matchesMonthSearch(
+                                                                monthSearch,
+                                                                yearNumber,
+                                                                Number(month),
+                                                            ),
+                                                        )
+                                                        .map(
+                                                            ([
+                                                                month,
+                                                                reports,
+                                                            ]) => {
+                                                                const monthNumber =
+                                                                    Number(
+                                                                        month,
+                                                                    );
+                                                                const monthOpen =
+                                                                    openMonth ===
+                                                                    monthNumber;
+
+                                                                return (
+                                                                    <div
+                                                                        key={
+                                                                            month
+                                                                        }
+                                                                        className="border-t"
+                                                                    >
+                                                                        {/* MONTH */}
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                setOpenMonth(
+                                                                                    monthOpen
+                                                                                        ? null
+                                                                                        : monthNumber,
+                                                                                )
+                                                                            }
+                                                                            className="flex w-full items-center justify-between px-6 py-2 text-sm"
+                                                                        >
+                                                                            📂{' '}
+                                                                            {format(
+                                                                                new Date(
+                                                                                    yearNumber,
+                                                                                    monthNumber,
+                                                                                    1,
+                                                                                ),
+                                                                                'MMMM',
+                                                                            )}
+                                                                            <span>
+                                                                                {monthOpen
+                                                                                    ? '▲'
+                                                                                    : '▼'}
+                                                                            </span>
+                                                                        </button>
+
+                                                                        {/* REPORTS */}
+                                                                        {monthOpen && (
+                                                                            <div className="grid grid-cols-2 gap-3 px-8 pb-3">
+                                                                                {reports.map(
+                                                                                    (
+                                                                                        report,
+                                                                                    ) => (
+                                                                                        <div
+                                                                                            key={
+                                                                                                report.id
+                                                                                            }
+                                                                                            className="flex items-center justify-between rounded-md border px-3 py-2 text-sm font-semibold"
+                                                                                        >
+                                                                                            <span>
+                                                                                                {format(
+                                                                                                    report.startDate,
+                                                                                                    'MMM dd',
+                                                                                                )}{' '}
+                                                                                                –{' '}
+                                                                                                {format(
+                                                                                                    report.endDate,
+                                                                                                    'MMM dd, yyyy',
+                                                                                                )}
+                                                                                            </span>
+
+                                                                                            <button
+                                                                                                onClick={() =>
+                                                                                                    retrieveReport(
+                                                                                                        report.id,
+                                                                                                    )
+                                                                                                }
+                                                                                                className="text-xs font-medium text-primary hover:underline"
+                                                                                            >
+                                                                                                Retrieve
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    ),
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            },
+                                                        )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                         </div>
                     </div>
                 )}
