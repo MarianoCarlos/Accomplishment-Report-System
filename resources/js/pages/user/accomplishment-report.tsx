@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -86,6 +86,34 @@ export default function AccomplishmentReport() {
         [archivedReports],
     );
 
+    const autoOpen = (() => {
+        if (!yearSearch && !monthSearch) {
+            return { year: null, month: null };
+        }
+
+        for (const [year, months] of Object.entries(groupedArchived)) {
+            const yearNumber = Number(year);
+
+            if (!matchesYearSearch(yearSearch, yearNumber)) continue;
+
+            if (!monthSearch) {
+                return { year: yearNumber, month: null };
+            }
+
+            for (const month of Object.keys(months)) {
+                const monthNumber = Number(month);
+
+                if (matchesMonthSearch(monthSearch, yearNumber, monthNumber)) {
+                    return { year: yearNumber, month: monthNumber };
+                }
+            }
+
+            return { year: yearNumber, month: null };
+        }
+
+        return { year: null, month: null };
+    })();
+
     const disabledDates = useMemo(
         () => (date: Date) =>
             reports.some((report) =>
@@ -148,33 +176,6 @@ export default function AccomplishmentReport() {
 
         return monthName.includes(search.toLowerCase().trim());
     }
-
-    useEffect(() => {
-        if (!yearSearch && !monthSearch) return;
-
-        for (const [year, months] of Object.entries(groupedArchived)) {
-            const yearNumber = Number(year);
-
-            if (!matchesYearSearch(yearSearch, yearNumber)) continue;
-
-            // Open the matching year
-            setOpenYear(yearNumber);
-
-            for (const month of Object.keys(months)) {
-                const monthNumber = Number(month);
-
-                if (matchesMonthSearch(monthSearch, yearNumber, monthNumber)) {
-                    // Open the matching month
-                    setOpenMonth(monthNumber);
-                    return;
-                }
-            }
-
-            // If year matches but no month search, just open year
-            setOpenMonth(null);
-            return;
-        }
-    }, [yearSearch, monthSearch]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -338,9 +339,11 @@ export default function AccomplishmentReport() {
                                 <input
                                     type="text"
                                     value={yearSearch}
-                                    onChange={(e) => setYearSearch(e.target.value)}
+                                    onChange={(e) =>
+                                        setYearSearch(e.target.value)
+                                    }
                                     placeholder="e.g. 2026"
-                                    className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    className="rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-gray-400 focus:outline-none"
                                 />
                             </div>
 
@@ -351,9 +354,11 @@ export default function AccomplishmentReport() {
                                 <input
                                     type="text"
                                     value={monthSearch}
-                                    onChange={(e) => setMonthSearch(e.target.value)}
+                                    onChange={(e) =>
+                                        setMonthSearch(e.target.value)
+                                    }
                                     placeholder="e.g. Feb"
-                                    className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    className="rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-gray-400 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -366,7 +371,9 @@ export default function AccomplishmentReport() {
                                 )
                                 .map(([year, months]) => {
                                     const yearNumber = Number(year);
-                                    const yearOpen = openYear === yearNumber;
+                                    const yearOpen =
+                                        openYear === yearNumber ||
+                                        autoOpen.year === yearNumber;
 
                                     return (
                                         <div
@@ -422,7 +429,9 @@ export default function AccomplishmentReport() {
                                                                     );
                                                                 const monthOpen =
                                                                     openMonth ===
-                                                                    monthNumber;
+                                                                        monthNumber ||
+                                                                    autoOpen.month ===
+                                                                        monthNumber;
 
                                                                 return (
                                                                     <div
