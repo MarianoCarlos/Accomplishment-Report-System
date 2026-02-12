@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { ChevronDown, ChevronUp, Archive, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import TiptapEditor from '@/components/Editor/TiptapEditor';
@@ -35,6 +36,17 @@ function generateDays(start: Date, end: Date) {
 
 function isDateInRange(date: Date, start: Date, end: Date) {
     return date >= start && date <= end;
+}
+
+function countCompletedDays(report: Report): {
+    completed: number;
+    total: number;
+} {
+    const days = generateDays(report.startDate, report.endDate);
+    const completed = Object.values(report.entries).filter(
+        (v) => v.trim() !== '',
+    ).length;
+    return { completed, total: days.length };
 }
 
 type Props = {
@@ -112,17 +124,34 @@ export default function ActiveReports({
             {/* NORMAL SCREEN CONTENT */}
             <div className="print:hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <h1 className="text-xl font-semibold">Accomplishments</h1>
+                <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            Accomplishments
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Manage and submit your bi-monthly accomplishment
+                            reports.
+                        </p>
+                    </div>
 
                     <Popover open={open} onOpenChange={setOpen}>
                         <PopoverTrigger asChild>
-                            <Button disabled={expandedId !== null}>
+                            <Button
+                                disabled={expandedId !== null}
+                                className="shadow-sm"
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
                                 Add Accomplishment
                             </Button>
                         </PopoverTrigger>
 
-                        <PopoverContent className="w-auto p-0" align="end">
+                        <PopoverContent
+                            align="end"
+                            side="bottom"
+                            sideOffset={8}
+                            className="w-auto rounded-xl p-0 shadow-lg"
+                        >
                             <div className="p-3">
                                 <Calendar
                                     mode="range"
@@ -162,20 +191,22 @@ export default function ActiveReports({
 
                 {/* Active list */}
                 {reports.length > 0 && (
-                    <div className="grid max-w-xl grid-cols-2 gap-3">
+                    <div className="grid max-w-2xl grid-cols-2 gap-3">
                         {reports.map((report) => {
                             const expanded = report.id === expandedId;
                             const isDisabled =
                                 expandedId !== null && expandedId !== report.id;
+                            const { completed, total } =
+                                countCompletedDays(report);
 
                             return (
                                 <div
                                     key={report.id}
-                                    className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                                    className={`flex flex-col rounded-lg border bg-muted/30 px-4 py-3 shadow-sm transition hover:shadow-md ${
                                         isDisabled
                                             ? 'cursor-not-allowed opacity-40'
-                                            : 'border-input bg-background'
-                                    } `}
+                                            : ''
+                                    }`}
                                 >
                                     <button
                                         disabled={isDisabled}
@@ -184,9 +215,9 @@ export default function ActiveReports({
                                                 expanded ? null : report.id,
                                             )
                                         }
-                                        className="flex flex-1 items-center justify-between disabled:pointer-events-none"
+                                        className="flex items-center justify-between disabled:pointer-events-none"
                                     >
-                                        <span>
+                                        <span className="text-sm font-semibold">
                                             {format(report.startDate, 'MMM dd')}{' '}
                                             –{' '}
                                             {format(
@@ -194,18 +225,29 @@ export default function ActiveReports({
                                                 'MMM dd, yyyy',
                                             )}
                                         </span>
-                                        <span className="ml-2 text-xs">
-                                            {expanded ? '▲' : '▼'}
-                                        </span>
+                                        {expanded ? (
+                                            <ChevronUp className="h-4 w-4" />
+                                        ) : (
+                                            <ChevronDown className="h-4 w-4" />
+                                        )}
                                     </button>
 
-                                    <button
-                                        disabled={isDisabled}
-                                        onClick={() => archiveReport(report.id)}
-                                        className="ml-3 text-xs font-medium text-destructive hover:underline disabled:pointer-events-none"
-                                    >
-                                        Archive
-                                    </button>
+                                    <div className="mt-2 flex items-center justify-between">
+                                        <span className="text-xs text-muted-foreground">
+                                            {completed}/{total} days completed
+                                        </span>
+
+                                        <button
+                                            disabled={isDisabled}
+                                            onClick={() =>
+                                                archiveReport(report.id)
+                                            }
+                                            className="text-destructive transition hover:opacity-80 disabled:pointer-events-none"
+                                            title="Archive"
+                                        >
+                                            <Archive className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -214,7 +256,14 @@ export default function ActiveReports({
 
                 {/* Expanded editor */}
                 {expandedReport && (
-                    <div className="mt-2 rounded-xl border p-4">
+                    <div className="mt-4 rounded-xl border bg-muted/20 p-6">
+                        <div className="mb-4">
+                            <h2 className="text-lg font-semibold">
+                                {format(expandedReport.startDate, 'MMM dd')} –{' '}
+                                {format(expandedReport.endDate, 'MMM dd, yyyy')}
+                            </h2>
+                        </div>
+
                         <table className="w-full">
                             <tbody>
                                 {generateDays(
@@ -225,8 +274,15 @@ export default function ActiveReports({
                                         key={date.toISOString()}
                                         className="align-middle"
                                     >
-                                        <td className="w-28 py-2 text-center text-sm font-medium">
-                                            {format(date, 'MMM dd')}
+                                        <td className="w-28 py-3 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-xs tracking-wide text-muted-foreground uppercase">
+                                                    {format(date, 'EEE')}
+                                                </span>
+                                                <span className="text-sm font-medium">
+                                                    {format(date, 'dd')}
+                                                </span>
+                                            </div>
                                         </td>
 
                                         <td className="py-2">
@@ -268,22 +324,26 @@ export default function ActiveReports({
                         </table>
 
                         {/* Footer actions */}
-                        <div className="mt-4 flex justify-end gap-2 print:hidden">
+                        <div className="mt-6 flex justify-end gap-2 print:hidden">
                             <Button
-                                variant="outline"
+                                variant="ghost"
                                 onClick={() => setExpandedId(null)}
                             >
                                 Cancel
                             </Button>
 
                             <Button
-                                variant="outline"
+                                variant="secondary"
                                 onClick={() => setExpandedId(null)}
                             >
                                 Save Report
                             </Button>
 
-                            <Button onClick={() => setIsPrintModalOpen(true)}>
+                            <Button
+                                onClick={() => {
+                                    setIsPrintModalOpen(true);
+                                }}
+                            >
                                 Print
                             </Button>
                         </div>
@@ -310,6 +370,7 @@ export default function ActiveReports({
 
                         setTimeout(() => {
                             window.print();
+                            setExpandedId(null);
                         }, 100);
                     }}
                 />
