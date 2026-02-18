@@ -1,5 +1,5 @@
-import { format } from 'date-fns';
 import { usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
 import type { Report } from '@/pages/user/accomplishment-report';
 
@@ -19,10 +19,10 @@ type Props = {
     approver: string;
 };
 
-function generateDays(start: Date, end: Date) {
+function generateDays(start: string, end: string) {
     const days: Date[] = [];
-    let current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const normalizedEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    const current = new Date(start + 'T00:00:00');
+    const normalizedEnd = new Date(end + 'T00:00:00');
 
     while (current <= normalizedEnd) {
         days.push(new Date(current));
@@ -42,9 +42,8 @@ export default function ReportPrintTemplate({
     const { auth } = usePage<PageProps>().props;
     const userName = auth.user.name;
     
-    // Ensure dates are Date objects (in case they come from backend as strings)
-    const startDate = report.startDate instanceof Date ? report.startDate : new Date(report.startDate);
-    const endDate = report.endDate instanceof Date ? report.endDate : new Date(report.endDate);
+    const startDate = report.startDate;
+    const endDate = report.endDate;
     
     const days = generateDays(startDate, endDate);
 
@@ -61,8 +60,8 @@ export default function ReportPrintTemplate({
                 <div className="text-center">
                     <p className="text-base font-bold">ACCOMPLISHMENT REPORT</p>
                     <p>
-                        {format(startDate, 'MMMM d')} –{' '}
-                        {format(endDate, 'd, yyyy')}
+                        {format(new Date(startDate + 'T00:00:00'), 'MMMM d')} –{' '}
+                        {format(new Date(endDate + 'T00:00:00'), 'd, yyyy')}
                     </p>
                 </div>
             </div>
@@ -105,7 +104,7 @@ export default function ReportPrintTemplate({
                                 <td
                                     className="border border-black p-2 align-top break-words whitespace-pre-wrap"
                                     dangerouslySetInnerHTML={{
-                                        __html: DOMPurify.sanitize(report.entries[key] || ''),
+                                        __html: DOMPurify.sanitize(report.entries[key]?.content ?? ''),
                                     }}
                                 />
                             </tr>

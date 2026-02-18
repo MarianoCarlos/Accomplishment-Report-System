@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     Folder,
@@ -7,6 +8,7 @@ import {
     ChevronRight,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import * as ReportController from '@/actions/App/Http/Controllers/ReportController';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { Report } from '@/pages/user/accomplishment-report';
@@ -15,7 +17,7 @@ function groupArchivedReports(reports: Report[]) {
     const map: Record<number, Record<number, Report[]>> = {};
 
     reports.forEach((report) => {
-        const startDate = report.startDate instanceof Date ? report.startDate : new Date(report.startDate);
+        const startDate = new Date(report.startDate + 'T00:00:00');
         const year = startDate.getFullYear();
         const month = startDate.getMonth(); // 0–11
 
@@ -46,15 +48,9 @@ function matchesMonthSearch(search: string, year: number, month: number) {
 
 type Props = {
     archivedReports: Report[];
-    setArchivedReports: React.Dispatch<React.SetStateAction<Report[]>>;
-    setReports: React.Dispatch<React.SetStateAction<Report[]>>;
 };
 
-export default function ArchivedReports({
-    archivedReports,
-    setArchivedReports,
-    setReports,
-}: Props) {
+export default function ArchivedReports({ archivedReports }: Props) {
     const [openYear, setOpenYear] = useState<number | null>(null);
     const [openMonth, setOpenMonth] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -64,7 +60,7 @@ export default function ArchivedReports({
         [archivedReports],
     );
 
-    const autoOpen = useMemo(() => {
+    const autoOpen = (() => {
         if (!searchQuery.trim()) {
             return { year: null, month: null };
         }
@@ -91,22 +87,24 @@ export default function ArchivedReports({
         }
 
         return { year: null, month: null };
-    }, [searchQuery, groupedArchived]);
+    })();
 
     const retrieveReport = (id: number) => {
-        const report = archivedReports.find((r) => r.id === id);
-        if (!report) return;
-
-        setArchivedReports((prev) => prev.filter((r) => r.id !== id));
-        setReports((prev) => [...prev, report]);
+        router.patch(
+            ReportController.restore(id).url,
+            {},
+            { preserveScroll: true },
+        );
     };
 
     const retrieveMonthReports = (monthReports: Report[]) => {
-        const reportIds = new Set(monthReports.map((r) => r.id));
-        setArchivedReports((prev) =>
-            prev.filter((r) => !reportIds.has(r.id)),
-        );
-        setReports((prev) => [...prev, ...monthReports]);
+        monthReports.forEach((report) => {
+            router.patch(
+                ReportController.restore(report.id).url,
+                {},
+                { preserveScroll: true },
+            );
+        });
     };
 
     return (
@@ -284,18 +282,18 @@ export default function ArchivedReports({
                                                                                     <div>
                                                                                         <span className="block font-medium">
                                                                                             {format(
-                                                                                                report.startDate,
+                                                                                                new Date(report.startDate + 'T00:00:00'),
                                                                                                 'MMM dd',
                                                                                             )}{' '}
                                                                                             –{' '}
                                                                                             {format(
-                                                                                                report.endDate,
+                                                                                                new Date(report.endDate + 'T00:00:00'),
                                                                                                 'MMM dd',
                                                                                             )}
                                                                                         </span>
                                                                                         <span className="text-xs text-muted-foreground">
                                                                                             {format(
-                                                                                                report.endDate,
+                                                                                                new Date(report.endDate + 'T00:00:00'),
                                                                                                 'yyyy',
                                                                                             )}
                                                                                         </span>

@@ -1,9 +1,7 @@
+import { usePage } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
 import { useState } from 'react';
-import { usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
@@ -11,6 +9,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { Report } from '@/pages/user/accomplishment-report';
 
 type PageProps = {
     auth: {
@@ -23,6 +24,7 @@ type PageProps = {
 type Props = {
     isOpen: boolean;
     onClose: () => void;
+    report: Report | null;
     onConfirm: (
         reviewer: string,
         approver: string,
@@ -34,15 +36,16 @@ type Props = {
 export default function PrintReportModal({
     isOpen,
     onClose,
+    report,
     onConfirm,
 }: Props) {
     const { auth } = usePage<PageProps>().props;
     const userName = auth.user.name;
 
-    const [reviewer, setReviewer] = useState('');
-    const [approver, setApprover] = useState('');
-    const [office, setOffice] = useState('');
-    const [position, setPosition] = useState('');
+    const [reviewer, setReviewer] = useState(report?.reviewer ?? '');
+    const [approver, setApprover] = useState(report?.approver ?? '');
+    const [office, setOffice] = useState(report?.office ?? '');
+    const [position, setPosition] = useState(report?.position ?? '');
 
     const resetFields = () => {
         setReviewer('');

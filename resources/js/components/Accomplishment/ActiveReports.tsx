@@ -1,7 +1,10 @@
+import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { ChevronDown, ChevronUp, Archive, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+import * as ReportController from '@/actions/App/Http/Controllers/ReportController';
+import * as ReportEntryController from '@/actions/App/Http/Controllers/ReportEntryController';
 import TiptapEditor from '@/components/Editor/TiptapEditor';
 import PrintReportModal from '@/components/PrintModal/PrintReportModal';
 import { Button } from '@/components/ui/button';
@@ -26,11 +29,12 @@ function normalize(d: Date) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-function generateDays(start: Date, end: Date) {
+function generateDays(start: string, end: string) {
     const days: Date[] = [];
-    const current = new Date(start);
+    const current = new Date(start + 'T00:00:00');
+    const endDate = new Date(end + 'T00:00:00');
 
-    while (current <= end) {
+    while (current <= endDate) {
         days.push(new Date(current));
         current.setDate(current.getDate() + 1);
     }
@@ -38,10 +42,10 @@ function generateDays(start: Date, end: Date) {
     return days;
 }
 
-function isDateInRange(date: Date, start: Date, end: Date) {
+function isDateInRange(date: Date, start: string, end: string) {
     const d = normalize(date);
-    const s = normalize(start);
-    const e = normalize(end);
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T00:00:00');
     return d >= s && d <= e;
 }
 
@@ -49,7 +53,7 @@ function countCompletedDays(report: Report) {
     const total = Object.keys(report.entries).length;
 
     const completed = Object.values(report.entries).filter(
-        (v) => v.trim() !== '',
+        (v) => v.content.trim() !== '',
     ).length;
 
     return { completed, total };
@@ -57,39 +61,20 @@ function countCompletedDays(report: Report) {
 
 type Props = {
     reports: Report[];
-    setReports: React.Dispatch<React.SetStateAction<Report[]>>;
-    setArchivedReports: React.Dispatch<React.SetStateAction<Report[]>>;
-    nextId: number;
-    setNextId: React.Dispatch<React.SetStateAction<number>>;
     setPrintData: (data: PrintData) => void;
 };
 
-export default function ActiveReports({
-    reports,
-    setReports,
-    setArchivedReports,
-    nextId,
-    setNextId,
-    setPrintData,
-}: Props) {
+export default function ActiveReports({ reports, setPrintData }: Props) {
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [open, setOpen] = useState(false);
     const [range, setRange] = useState<DateRange | undefined>();
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-    const updateEntry = (reportId: number, key: string, value: string) => {
-        setReports((prev) =>
-            prev.map((report) =>
-                report.id === reportId
-                    ? {
-                          ...report,
-                          entries: {
-                              ...report.entries,
-                              [key]: value,
-                          },
-                      }
-                    : report,
-            ),
+    const updateEntry = (entryId: number, value: string) => {
+        router.patch(
+            ReportEntryController.update(entryId).url,
+            { content: value },
+            { preserveScroll: true },
         );
     };
 
@@ -102,54 +87,43 @@ export default function ActiveReports({
     const addReport = () => {
         if (!range?.from || !range?.to) return;
 
-        const from = normalize(range.from);
-        const to = normalize(range.to);
-
-        // Ensure correct order (just in case)
-        if (from > to) return;
-
-        // Prevent overlapping ranges
-        const hasOverlap = reports.some((r) => {
-            const existingStart = normalize(r.startDate);
-            const existingEnd = normalize(r.endDate);
-
-            return !(to < existingStart || from > existingEnd);
-        });
-
-        if (hasOverlap) {
-            // Optionally show toast or alert here
-            return;
-        }
-
-        const days = generateDays(from, to);
-
-        const entries: Record<string, string> = {};
-        days.forEach((day) => {
-            entries[format(day, 'yyyy-MM-dd')] = '';
-        });
-
-        setReports((prev) => [
-            ...prev,
+        router.post(
+            ReportController.store().url,
             {
-                id: nextId,
-                startDate: from,
-                endDate: to,
-                entries,
+                start_date: format(range.from, 'yyyy-MM-dd'),
+                end_date: format(range.to, 'yyyy-MM-dd'),
             },
-        ]);
-
-        setNextId((prev) => prev + 1);
-        setRange(undefined);
-        setOpen(false);
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setRange(undefined);
+                    setOpen(false);
+                },
+            },
+        );
     };
 
     const archiveReport = (id: number) => {
-        const report = reports.find((r) => r.id === id);
-        if (!report) return;
+        router.patch(
+            ReportController.archive(id).url,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => setExpandedId(null),
+            },
+        );
+    };
 
-        setReports((prev) => prev.filter((r) => r.id !== id));
-        setArchivedReports((prev) => [...prev, report]);
-        setExpandedId(null);
+    const deleteReport = (id: number) => {
+        if (!confirm('Are you sure you want to permanently delete this report? This cannot be undone.')) return;
+
+        router.delete(
+            ReportController.destroy(id).url,
+            {
+                preserveScroll: true,
+                onSuccess: () => setExpandedId(null),
+            },
+        );
     };
 
     const expandedReport = reports.find((r) => r.id === expandedId);
@@ -258,10 +232,13 @@ export default function ActiveReports({
                                         className="flex items-center justify-between disabled:pointer-events-none"
                                     >
                                         <span className="text-sm font-semibold">
-                                            {format(report.startDate, 'MMM dd')}{' '}
+                                            {format(
+                                                new Date(report.startDate + 'T00:00:00'),
+                                                'MMM dd',
+                                            )}{' '}
                                             –{' '}
                                             {format(
-                                                report.endDate,
+                                                new Date(report.endDate + 'T00:00:00'),
                                                 'MMM dd, yyyy',
                                             )}
                                         </span>
@@ -299,14 +276,22 @@ export default function ActiveReports({
                     <Card className="mt-4 border border-border p-6">
                         <div className="mb-4">
                             <h2 className="text-lg font-semibold">
-                                {format(expandedReport.startDate, 'MMM dd')} –{' '}
-                                {format(expandedReport.endDate, 'MMM dd, yyyy')}
+                                {format(
+                                    new Date(expandedReport.startDate + 'T00:00:00'),
+                                    'MMM dd',
+                                )}{' '}
+                                –{' '}
+                                {format(
+                                    new Date(expandedReport.endDate + 'T00:00:00'),
+                                    'MMM dd, yyyy',
+                                )}
                             </h2>
                         </div>
 
                         <div className="space-y-6">
                             {expandedDays.map((date) => {
                                 const key = format(date, 'yyyy-MM-dd');
+                                const entry = expandedReport.entries[key];
 
                                 return (
                                     <div
@@ -326,17 +311,14 @@ export default function ActiveReports({
                                         {/* Right Editor */}
                                         <div className="flex-1">
                                             <TiptapEditor
-                                                value={
-                                                    expandedReport.entries[
-                                                        key
-                                                    ] ?? ''
-                                                }
+                                                value={entry?.content ?? ''}
                                                 onChange={(value) => {
-                                                    updateEntry(
-                                                        expandedReport.id,
-                                                        key,
-                                                        value,
-                                                    );
+                                                    if (entry) {
+                                                        updateEntry(
+                                                            entry.id,
+                                                            value,
+                                                        );
+                                                    }
                                                 }}
                                             />
                                         </div>
@@ -368,30 +350,59 @@ export default function ActiveReports({
                             >
                                 Print
                             </Button>
+
+                            <Button
+                                variant="destructive"
+                                onClick={() => deleteReport(expandedReport.id)}
+                            >
+                                Delete
+                            </Button>
                         </div>
                     </Card>
                 )}
 
                 <PrintReportModal
+                    key={expandedReport?.id ?? 'none'}
                     isOpen={isPrintModalOpen}
                     onClose={() => setIsPrintModalOpen(false)}
+                    report={expandedReport ?? null}
                     onConfirm={(reviewer, approver, modalOffice, modalPosition) => {
                         if (!expandedReport) return;
 
-                        setPrintData({
-                            report: expandedReport,
-                            position: modalPosition,
-                            office: modalOffice,
-                            reviewer,
-                            approver,
-                        });
+                        router.patch(
+                            ReportController.updatePrintDetails(expandedReport.id).url,
+                            {
+                                office: modalOffice,
+                                position: modalPosition,
+                                reviewer,
+                                approver,
+                            },
+                            {
+                                preserveScroll: true,
+                                onSuccess: () => {
+                                    setPrintData({
+                                        report: {
+                                            ...expandedReport,
+                                            office: modalOffice,
+                                            position: modalPosition,
+                                            reviewer,
+                                            approver,
+                                        },
+                                        position: modalPosition,
+                                        office: modalOffice,
+                                        reviewer,
+                                        approver,
+                                    });
 
-                        setIsPrintModalOpen(false);
+                                    setIsPrintModalOpen(false);
 
-                        setTimeout(() => {
-                            window.print();
-                            setExpandedId(null);
-                        }, 200);
+                                    setTimeout(() => {
+                                        window.print();
+                                        setExpandedId(null);
+                                    }, 200);
+                                },
+                            },
+                        );
                     }}
                 />
             </div>
