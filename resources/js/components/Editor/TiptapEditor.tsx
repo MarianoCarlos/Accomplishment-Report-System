@@ -2,6 +2,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { useEffect } from 'react';
 import {
     AlignCenter,
     AlignJustify,
@@ -36,6 +37,20 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
             onChange(editor.getHTML());
         },
     });
+
+    // Sync external value changes into the editor
+    useEffect(() => {
+    if (!editor) return;
+
+    const currentHTML = editor.getHTML();
+
+    if (value !== currentHTML) {
+        editor.commands.setContent(value || '', {
+            emitUpdate: false,
+        });
+    }
+}, [value, editor]);
+
 
     if (!editor) return null;
 

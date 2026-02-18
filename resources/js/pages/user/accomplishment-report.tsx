@@ -21,7 +21,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 type PrintData = {
     report: Report;
-    userName: string;
     position: string;
     office: string;
     reviewer: string;
@@ -66,7 +65,6 @@ export default function AccomplishmentReport() {
             {printData && (
                 <ReportPrintTemplate
                     report={printData.report}
-                    userName={printData.userName}
                     position={printData.position}
                     office={printData.office}
                     reviewer={printData.reviewer}

@@ -1,123 +1,157 @@
 import { Printer } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+
+type PageProps = {
+    auth: {
+        user: {
+            name: string;
+        };
+    };
+};
 
 type Props = {
     isOpen: boolean;
     onClose: () => void;
-    userName: string;
-    onConfirm: (reviewer: string, approver: string) => void;
+    onConfirm: (
+        reviewer: string,
+        approver: string,
+        office: string,
+        position: string
+    ) => void;
 };
 
 export default function PrintReportModal({
     isOpen,
     onClose,
-    userName,
     onConfirm,
 }: Props) {
+    const { auth } = usePage<PageProps>().props;
+    const userName = auth.user.name;
+
     const [reviewer, setReviewer] = useState('');
     const [approver, setApprover] = useState('');
+    const [office, setOffice] = useState('');
+    const [position, setPosition] = useState('');
 
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-
-        if (isOpen) {
-            window.addEventListener('keydown', handleEsc);
-            return () => window.removeEventListener('keydown', handleEsc);
-        }
-    }, [isOpen, onClose]);
-
-    if (!isOpen) return null;
-
-    const handlePrint = () => {
-        onConfirm(reviewer, approver);
-
-        // reset values
+    const resetFields = () => {
         setReviewer('');
         setApprover('');
+        setOffice('');
+        setPosition('');
+    };
+
+    const handleClose = () => {
+        resetFields();
+        onClose();
+    };
+
+    const handlePrint = () => {
+        onConfirm(reviewer, approver, office, position);
+        resetFields();
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={onClose}
-        >
-            <div
-                onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
-            >
-                <div className="mb-5">
+        <Dialog open={isOpen} onOpenChange={(open) => {
+            if (!open) handleClose();
+        }}>
+            <DialogContent className="max-w-lg print:hidden">
+                <DialogHeader>
                     <div className="flex items-center gap-2">
                         <Printer className="h-5 w-5 text-muted-foreground" />
-                        <h2 className="text-lg font-semibold">
-                            Print Accomplishment Report
-                        </h2>
+                        <DialogTitle>Print Accomplishment Report</DialogTitle>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Please select the reviewer and approver before
-                        printing.
-                    </p>
-                </div>
+                    <DialogDescription>
+                        Fill out the required information before printing.
+                    </DialogDescription>
+                </DialogHeader>
 
                 <div className="space-y-4">
                     {/* User */}
-                    <div>
-                        <label className="text-sm font-medium">User</label>
-                        <div className="mt-1 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                            {userName}
-                        </div>
+                    <div className="space-y-2">
+                        <Label>User</Label>
+                        <Input
+                            value={userName}
+                            disabled
+                            className="bg-muted/40"
+                        />
+                    </div>
+
+                    {/* Office */}
+                    <div className="space-y-2">
+                        <Label htmlFor="office">Office</Label>
+                        <Input
+                            id="office"
+                            value={office}
+                            onChange={(e) => setOffice(e.target.value)}
+                            placeholder="Enter office"
+                        />
+                    </div>
+
+                    {/* Position */}
+                    <div className="space-y-2">
+                        <Label htmlFor="position">Position</Label>
+                        <Input
+                            id="position"
+                            value={position}
+                            onChange={(e) => setPosition(e.target.value)}
+                            placeholder="Enter position"
+                        />
                     </div>
 
                     {/* Reviewer */}
-                    <div>
-                        <label className="text-sm font-medium">
-                            Reviewer
-                        </label>
-                        <select
+                    <div className="space-y-2">
+                        <Label htmlFor="reviewer">Reviewer</Label>
+                        <Input
+                            id="reviewer"
                             value={reviewer}
                             onChange={(e) => setReviewer(e.target.value)}
-                            className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        >
-                            <option value="">Select reviewer</option>
-                            <option value="John Doe">John Doe</option>
-                            <option value="Jane Smith">Jane Smith</option>
-                        </select>
+                            placeholder="Enter reviewer name"
+                        />
                     </div>
 
                     {/* Approver */}
-                    <div>
-                        <label className="text-sm font-medium">
-                            Approver
-                        </label>
-                        <select
+                    <div className="space-y-2">
+                        <Label htmlFor="approver">Approver</Label>
+                        <Input
+                            id="approver"
                             value={approver}
                             onChange={(e) => setApprover(e.target.value)}
-                            className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        >
-                            <option value="">Select approver</option>
-                            <option value="Manager A">Manager A</option>
-                            <option value="Director B">Director B</option>
-                        </select>
+                            placeholder="Enter approver name"
+                        />
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="mt-6 flex justify-end gap-2">
-                    <Button variant="outline" onClick={onClose}>
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={handleClose}>
                         Cancel
                     </Button>
 
                     <Button
                         onClick={handlePrint}
-                        disabled={!reviewer || !approver}
+                        disabled={
+                            !reviewer.trim() ||
+                            !approver.trim() ||
+                            !office.trim() ||
+                            !position.trim()
+                        }
                         className="min-w-[110px]"
                     >
                         Print Report
                     </Button>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

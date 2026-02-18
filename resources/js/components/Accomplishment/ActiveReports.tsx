@@ -6,6 +6,7 @@ import TiptapEditor from '@/components/Editor/TiptapEditor';
 import PrintReportModal from '@/components/PrintModal/PrintReportModal';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Card } from '@/components/ui/card';
 import {
     Popover,
     PopoverContent,
@@ -15,12 +16,15 @@ import type { Report } from '@/pages/user/accomplishment-report';
 
 type PrintData = {
     report: Report;
-    userName: string;
     position: string;
     office: string;
     reviewer: string;
     approver: string;
 };
+
+function normalize(d: Date) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 
 function generateDays(start: Date, end: Date) {
     const days: Date[] = [];
@@ -35,18 +39,20 @@ function generateDays(start: Date, end: Date) {
 }
 
 function isDateInRange(date: Date, start: Date, end: Date) {
-    return date >= start && date <= end;
+    const d = normalize(date);
+    const s = normalize(start);
+    const e = normalize(end);
+    return d >= s && d <= e;
 }
 
-function countCompletedDays(report: Report): {
-    completed: number;
-    total: number;
-} {
-    const days = generateDays(report.startDate, report.endDate);
+function countCompletedDays(report: Report) {
+    const total = Object.keys(report.entries).length;
+
     const completed = Object.values(report.entries).filter(
         (v) => v.trim() !== '',
     ).length;
-    return { completed, total: days.length };
+
+    return { completed, total };
 }
 
 type Props = {
@@ -55,9 +61,6 @@ type Props = {
     setArchivedReports: React.Dispatch<React.SetStateAction<Report[]>>;
     nextId: number;
     setNextId: React.Dispatch<React.SetStateAction<number>>;
-    userName?: string;
-    position?: string;
-    office?: string;
     setPrintData: (data: PrintData) => void;
 };
 
@@ -67,15 +70,28 @@ export default function ActiveReports({
     setArchivedReports,
     nextId,
     setNextId,
-    userName = 'User Name',
-    position = 'Project Technical Staff I',
-    office = 'HEMIS',
     setPrintData,
 }: Props) {
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [open, setOpen] = useState(false);
     const [range, setRange] = useState<DateRange | undefined>();
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+    const updateEntry = (reportId: number, key: string, value: string) => {
+        setReports((prev) =>
+            prev.map((report) =>
+                report.id === reportId
+                    ? {
+                          ...report,
+                          entries: {
+                              ...report.entries,
+                              [key]: value,
+                          },
+                      }
+                    : report,
+            ),
+        );
+    };
 
     const disabledDates = useMemo(
         () => (date: Date) =>
@@ -86,7 +102,26 @@ export default function ActiveReports({
     const addReport = () => {
         if (!range?.from || !range?.to) return;
 
-        const days = generateDays(range.from, range.to);
+        const from = normalize(range.from);
+        const to = normalize(range.to);
+
+        // Ensure correct order (just in case)
+        if (from > to) return;
+
+        // Prevent overlapping ranges
+        const hasOverlap = reports.some((r) => {
+            const existingStart = normalize(r.startDate);
+            const existingEnd = normalize(r.endDate);
+
+            return !(to < existingStart || from > existingEnd);
+        });
+
+        if (hasOverlap) {
+            // Optionally show toast or alert here
+            return;
+        }
+
+        const days = generateDays(from, to);
 
         const entries: Record<string, string> = {};
         days.forEach((day) => {
@@ -97,8 +132,8 @@ export default function ActiveReports({
             ...prev,
             {
                 id: nextId,
-                startDate: range.from!,
-                endDate: range.to!,
+                startDate: from,
+                endDate: to,
                 entries,
             },
         ]);
@@ -118,6 +153,11 @@ export default function ActiveReports({
     };
 
     const expandedReport = reports.find((r) => r.id === expandedId);
+
+    const expandedDays = useMemo(() => {
+        if (!expandedReport) return [];
+        return generateDays(expandedReport.startDate, expandedReport.endDate);
+    }, [expandedReport]);
 
     return (
         <>
@@ -200,9 +240,9 @@ export default function ActiveReports({
                                 countCompletedDays(report);
 
                             return (
-                                <div
+                                <Card
                                     key={report.id}
-                                    className={`flex flex-col rounded-lg border bg-muted/30 px-4 py-3 shadow-sm transition hover:shadow-md ${
+                                    className={`flex flex-col gap-0 px-4 py-3 ${
                                         isDisabled
                                             ? 'cursor-not-allowed opacity-40'
                                             : ''
@@ -248,7 +288,7 @@ export default function ActiveReports({
                                             <Archive className="h-4 w-4" />
                                         </button>
                                     </div>
-                                </div>
+                                </Card>
                             );
                         })}
                     </div>
@@ -256,7 +296,7 @@ export default function ActiveReports({
 
                 {/* Expanded editor */}
                 {expandedReport && (
-                    <div className="mt-4 rounded-xl border bg-muted/20 p-6">
+                    <Card className="mt-4 border border-border p-6">
                         <div className="mb-4">
                             <h2 className="text-lg font-semibold">
                                 {format(expandedReport.startDate, 'MMM dd')} –{' '}
@@ -264,79 +304,61 @@ export default function ActiveReports({
                             </h2>
                         </div>
 
-                        <table className="w-full">
-                            <tbody>
-                                {generateDays(
-                                    expandedReport.startDate,
-                                    expandedReport.endDate,
-                                ).map((date) => (
-                                    <tr
-                                        key={date.toISOString()}
-                                        className="align-middle"
-                                    >
-                                        <td className="w-28 py-3 text-center">
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-xs tracking-wide text-muted-foreground uppercase">
-                                                    {format(date, 'EEE')}
-                                                </span>
-                                                <span className="text-sm font-medium">
-                                                    {format(date, 'dd')}
-                                                </span>
-                                            </div>
-                                        </td>
+                        <div className="space-y-6">
+                            {expandedDays.map((date) => {
+                                const key = format(date, 'yyyy-MM-dd');
 
-                                        <td className="py-2">
+                                return (
+                                    <div
+                                        key={key}
+                                        className="flex items-start gap-6"
+                                    >
+                                        {/* Left Date Column */}
+                                        <div className="flex w-24 flex-col items-center pt-3">
+                                            <span className="text-xs tracking-wide text-muted-foreground uppercase">
+                                                {format(date, 'EEE')}
+                                            </span>
+                                            <span className="text-sm font-semibold">
+                                                {format(date, 'dd')}
+                                            </span>
+                                        </div>
+
+                                        {/* Right Editor */}
+                                        <div className="flex-1">
                                             <TiptapEditor
                                                 value={
                                                     expandedReport.entries[
-                                                        format(
-                                                            date,
-                                                            'yyyy-MM-dd',
-                                                        )
+                                                        key
                                                     ] ?? ''
                                                 }
                                                 onChange={(value) => {
-                                                    const key = format(
-                                                        date,
-                                                        'yyyy-MM-dd',
-                                                    );
-
-                                                    setReports((prev) =>
-                                                        prev.map((report) =>
-                                                            report.id ===
-                                                            expandedReport.id
-                                                                ? {
-                                                                      ...report,
-                                                                      entries: {
-                                                                          ...report.entries,
-                                                                          [key]: value,
-                                                                      },
-                                                                  }
-                                                                : report,
-                                                        ),
+                                                    updateEntry(
+                                                        expandedReport.id,
+                                                        key,
+                                                        value,
                                                     );
                                                 }}
                                             />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
 
                         {/* Footer actions */}
                         <div className="mt-6 flex justify-end gap-2 print:hidden">
                             <Button
-                                variant="ghost"
+                                variant="destructive"
                                 onClick={() => setExpandedId(null)}
                             >
                                 Cancel
                             </Button>
 
                             <Button
-                                variant="secondary"
+                                variant="success"
                                 onClick={() => setExpandedId(null)}
                             >
-                                Save Report
+                                Done
                             </Button>
 
                             <Button
@@ -347,21 +369,19 @@ export default function ActiveReports({
                                 Print
                             </Button>
                         </div>
-                    </div>
+                    </Card>
                 )}
 
                 <PrintReportModal
                     isOpen={isPrintModalOpen}
                     onClose={() => setIsPrintModalOpen(false)}
-                    userName={userName}
-                    onConfirm={(reviewer, approver) => {
+                    onConfirm={(reviewer, approver, modalOffice, modalPosition) => {
                         if (!expandedReport) return;
 
                         setPrintData({
                             report: expandedReport,
-                            userName,
-                            position,
-                            office,
+                            position: modalPosition,
+                            office: modalOffice,
                             reviewer,
                             approver,
                         });
@@ -371,7 +391,7 @@ export default function ActiveReports({
                         setTimeout(() => {
                             window.print();
                             setExpandedId(null);
-                        }, 100);
+                        }, 200);
                     }}
                 />
             </div>

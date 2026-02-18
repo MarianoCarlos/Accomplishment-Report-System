@@ -1,9 +1,18 @@
 import { format } from 'date-fns';
+import { usePage } from '@inertiajs/react';
+import DOMPurify from 'dompurify';
 import type { Report } from '@/pages/user/accomplishment-report';
+
+type PageProps = {
+    auth: {
+        user: {
+            name: string;
+        };
+    };
+};
 
 type Props = {
     report: Report;
-    userName: string;
     position: string;
     office: string;
     reviewer: string;
@@ -12,9 +21,10 @@ type Props = {
 
 function generateDays(start: Date, end: Date) {
     const days: Date[] = [];
-    const current = new Date(start);
+    let current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const normalizedEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
 
-    while (current <= end) {
+    while (current <= normalizedEnd) {
         days.push(new Date(current));
         current.setDate(current.getDate() + 1);
     }
@@ -24,13 +34,19 @@ function generateDays(start: Date, end: Date) {
 
 export default function ReportPrintTemplate({
     report,
-    userName,
     position,
     office,
     reviewer,
     approver,
 }: Props) {
-    const days = generateDays(report.startDate, report.endDate);
+    const { auth } = usePage<PageProps>().props;
+    const userName = auth.user.name;
+    
+    // Ensure dates are Date objects (in case they come from backend as strings)
+    const startDate = report.startDate instanceof Date ? report.startDate : new Date(report.startDate);
+    const endDate = report.endDate instanceof Date ? report.endDate : new Date(report.endDate);
+    
+    const days = generateDays(startDate, endDate);
 
     return (
         <div className="print-content hidden bg-white p-10 text-sm text-black print:block print:p-12">
@@ -45,8 +61,8 @@ export default function ReportPrintTemplate({
                 <div className="text-center">
                     <p className="text-base font-bold">ACCOMPLISHMENT REPORT</p>
                     <p>
-                        {format(report.startDate, 'MMMM d')} –{' '}
-                        {format(report.endDate, 'd, yyyy')}
+                        {format(startDate, 'MMMM d')} –{' '}
+                        {format(endDate, 'd, yyyy')}
                     </p>
                 </div>
             </div>
@@ -81,7 +97,7 @@ export default function ReportPrintTemplate({
                         const key = format(date, 'yyyy-MM-dd');
 
                         return (
-                            <tr key={key}>
+                            <tr key={key} className="break-inside-avoid">
                                 <td className="border border-black p-2 text-center align-middle">
                                     {format(date, 'MMM d, yyyy')}
                                 </td>
@@ -89,7 +105,7 @@ export default function ReportPrintTemplate({
                                 <td
                                     className="border border-black p-2 align-top break-words whitespace-pre-wrap"
                                     dangerouslySetInnerHTML={{
-                                        __html: report.entries[key] || '',
+                                        __html: DOMPurify.sanitize(report.entries[key] || ''),
                                     }}
                                 />
                             </tr>
