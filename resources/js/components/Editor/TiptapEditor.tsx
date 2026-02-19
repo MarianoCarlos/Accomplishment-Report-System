@@ -1,5 +1,4 @@
 import TextAlign from '@tiptap/extension-text-align';
-import Underline from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
@@ -13,6 +12,7 @@ import {
     ListOrdered,
     Underline as UnderlineIcon,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 type TiptapEditorProps = {
@@ -26,7 +26,6 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
             StarterKit.configure({
                 heading: false,
             }),
-            Underline,
             TextAlign.configure({
                 types: ['paragraph'],
             }),
@@ -36,6 +35,20 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
             onChange(editor.getHTML());
         },
     });
+
+    // Sync external value changes into the editor
+    useEffect(() => {
+    if (!editor) return;
+
+    const currentHTML = editor.getHTML();
+
+    if (value !== currentHTML) {
+        editor.commands.setContent(value || '', {
+            emitUpdate: false,
+        });
+    }
+}, [value, editor]);
+
 
     if (!editor) return null;
 

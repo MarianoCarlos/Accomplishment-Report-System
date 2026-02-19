@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
 import {
     Folder,
@@ -7,14 +8,18 @@ import {
     ChevronRight,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import * as ReportController from '@/actions/App/Http/Controllers/ReportController';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import type { Report } from '@/pages/user/accomplishment-report';
 
 function groupArchivedReports(reports: Report[]) {
     const map: Record<number, Record<number, Report[]>> = {};
 
     reports.forEach((report) => {
-        const year = report.startDate.getFullYear();
-        const month = report.startDate.getMonth(); // 0–11
+        const startDate = new Date(report.startDate + 'T00:00:00');
+        const year = startDate.getFullYear();
+        const month = startDate.getMonth(); // 0–11
 
         if (!map[year]) map[year] = {};
         if (!map[year][month]) map[year][month] = [];
@@ -43,18 +48,11 @@ function matchesMonthSearch(search: string, year: number, month: number) {
 
 type Props = {
     archivedReports: Report[];
-    setArchivedReports: React.Dispatch<React.SetStateAction<Report[]>>;
-    setReports: React.Dispatch<React.SetStateAction<Report[]>>;
 };
 
-export default function ArchivedReports({
-    archivedReports,
-    setArchivedReports,
-    setReports,
-}: Props) {
+export default function ArchivedReports({ archivedReports }: Props) {
     const [openYear, setOpenYear] = useState<number | null>(null);
-    const [openMonth, setOpenMonth] = useState<number | null>(null);
-
+    const [openMonth, setOpenMonth] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     const groupedArchived = useMemo(
@@ -70,42 +68,43 @@ export default function ArchivedReports({
         for (const [year, months] of Object.entries(groupedArchived)) {
             const yearNumber = Number(year);
 
-            if (!matchesYearSearch(searchQuery, yearNumber)) continue;
-
-            if (!searchQuery) {
-                return { year: yearNumber, month: null };
-            }
-
             for (const month of Object.keys(months)) {
                 const monthNumber = Number(month);
 
                 if (
-                    searchQuery.trim() &&
                     matchesMonthSearch(searchQuery, yearNumber, monthNumber)
                 ) {
-                    return { year: yearNumber, month: monthNumber };
+                    return {
+                        year: yearNumber,
+                        month: `${yearNumber}-${monthNumber}`,
+                    };
                 }
             }
 
-            return { year: yearNumber, month: null };
+            if (matchesYearSearch(searchQuery, yearNumber)) {
+                return { year: yearNumber, month: null };
+            }
         }
 
         return { year: null, month: null };
     })();
 
     const retrieveReport = (id: number) => {
-        const report = archivedReports.find((r) => r.id === id);
-        if (!report) return;
-
-        setArchivedReports((prev) => prev.filter((r) => r.id !== id));
-        setReports((prev) => [...prev, report]);
+        router.patch(
+            ReportController.restore(id).url,
+            {},
+            { preserveScroll: true },
+        );
     };
 
     const retrieveMonthReports = (monthReports: Report[]) => {
-        setArchivedReports((prev) =>
-            prev.filter((r) => !monthReports.some((mr) => mr.id === r.id)),
-        );
-        setReports((prev) => [...prev, ...monthReports]);
+        monthReports.forEach((report) => {
+            router.patch(
+                ReportController.restore(report.id).url,
+                {},
+                { preserveScroll: true },
+            );
+        });
     };
 
     return (
@@ -114,36 +113,42 @@ export default function ArchivedReports({
 
             {/* Search input */}
             <div className="mb-4">
-                <label className="text-xs font-medium text-muted-foreground">
-                    Search archived reports
-                </label>
-                <input
+                <Input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="e.g. 2026 or February"
-                    className="mt-1 w-full rounded-md border px-3 py-2 text-sm transition focus:ring-2 focus:ring-gray-400 focus:outline-none"
                 />
             </div>
 
-            {/* Empty state */}
             {archivedReports.length === 0 ? (
-                <div className="rounded-md border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-                    No archived reports yet.
-                </div>
+                <Card className="p-6 text-center">
+                    <p className="text-sm text-muted-foreground">No archived reports yet.</p>
+                </Card>
             ) : (
-                /* Folder structure */
                 <div className="space-y-2">
                     {Object.entries(groupedArchived)
                         .sort((a, b) => Number(b[0]) - Number(a[0]))
-                        .filter(([year]) =>
-                            matchesYearSearch(searchQuery, Number(year)),
-                        )
+                        .filter(([year, months]) => {
+                            const yearNumber = Number(year);
+
+                            if (matchesYearSearch(searchQuery, yearNumber))
+                                return true;
+
+                            return Object.keys(months).some((month) =>
+                                matchesMonthSearch(
+                                    searchQuery,
+                                    yearNumber,
+                                    Number(month),
+                                ),
+                            );
+                        })
                         .map(([year, months]) => {
                             const yearNumber = Number(year);
                             const yearOpen =
-                                openYear === yearNumber ||
-                                autoOpen.year === yearNumber;
+                                searchQuery.trim()
+                                    ? autoOpen.year === yearNumber
+                                    : openYear === yearNumber;
                             const yearReportCount =
                                 Object.values(months).flat().length;
 
@@ -152,14 +157,14 @@ export default function ArchivedReports({
                                     key={year}
                                     className="overflow-hidden rounded-lg border"
                                 >
-                                    {/* YEAR */}
                                     <button
+                                        type="button"
                                         onClick={() =>
                                             setOpenYear(
                                                 yearOpen ? null : yearNumber,
                                             )
                                         }
-                                        className="flex w-full items-center justify-between bg-muted/40 px-4 py-3 font-semibold transition-colors hover:bg-muted/50"
+                                        className="flex w-full items-center justify-between bg-muted/40 px-4 py-3 font-semibold hover:bg-muted/50"
                                     >
                                         <div className="flex items-center gap-2">
                                             {yearOpen ? (
@@ -179,19 +184,13 @@ export default function ArchivedReports({
                                         )}
                                     </button>
 
-                                    {/* MONTHS */}
                                     {yearOpen && (
-                                        <div className="border-t transition-all duration-300">
-                                            {Object.entries(
-                                                months as Record<
-                                                    number,
-                                                    Report[]
-                                                >,
-                                            )
+                                        <div className="border-t">
+                                            {Object.entries(months)
                                                 .sort(
                                                     (a, b) =>
-                                                        Number(a[0]) -
-                                                        Number(b[0]),
+                                                        Number(b[0]) -
+                                                        Number(a[0]),
                                                 )
                                                 .filter(([month]) =>
                                                     matchesMonthSearch(
@@ -203,29 +202,31 @@ export default function ArchivedReports({
                                                 .map(([month, reports]) => {
                                                     const monthNumber =
                                                         Number(month);
+
+                                                    const monthKey = `${yearNumber}-${monthNumber}`;
+
                                                     const monthOpen =
-                                                        openMonth ===
-                                                            monthNumber ||
-                                                        autoOpen.month ===
-                                                            monthNumber;
+                                                        searchQuery.trim()
+                                                            ? autoOpen.month === monthKey
+                                                            : openMonth === monthKey;
 
                                                     return (
                                                         <div
                                                             key={month}
                                                             className="border-t"
                                                         >
-                                                            {/* MONTH */}
-                                                            <button
-                                                                onClick={() =>
-                                                                    setOpenMonth(
-                                                                        monthOpen
-                                                                            ? null
-                                                                            : monthNumber,
-                                                                    )
-                                                                }
-                                                                className="flex w-full items-center justify-between px-6 py-2 transition-colors hover:bg-muted/30"
-                                                            >
-                                                                <div className="flex items-center gap-2">
+                                                            <div className="flex items-center justify-between px-6 py-2 hover:bg-muted/30">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setOpenMonth(
+                                                                            monthOpen
+                                                                                ? null
+                                                                                : monthKey,
+                                                                        )
+                                                                    }
+                                                                    className="flex items-center gap-2"
+                                                                >
                                                                     <FileText className="h-4 w-4 text-muted-foreground" />
                                                                     <span className="text-sm">
                                                                         {format(
@@ -244,60 +245,55 @@ export default function ArchivedReports({
                                                                         }
                                                                         )
                                                                     </span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <button
-                                                                        onClick={(
-                                                                            e,
-                                                                        ) => {
-                                                                            e.stopPropagation();
-                                                                            retrieveMonthReports(
-                                                                                reports,
-                                                                            );
-                                                                        }}
-                                                                        className="text-xs font-medium text-primary hover:underline"
-                                                                    >
-                                                                        Restore
-                                                                        All
-                                                                    </button>
                                                                     {monthOpen ? (
                                                                         <ChevronDown className="h-4 w-4" />
                                                                     ) : (
                                                                         <ChevronRight className="h-4 w-4" />
                                                                     )}
-                                                                </div>
-                                                            </button>
+                                                                </button>
 
-                                                            {/* REPORTS */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        retrieveMonthReports(
+                                                                            reports,
+                                                                        )
+                                                                    }
+                                                                    className="text-xs font-medium text-primary hover:underline"
+                                                                >
+                                                                    Restore All
+                                                                </button>
+                                                            </div>
+
                                                             {monthOpen && (
-                                                                <div className="grid grid-cols-2 gap-3 bg-background px-8 py-3 transition-all duration-300">
+                                                                <div className="grid grid-cols-2 gap-3 bg-background px-8 py-3">
                                                                     {reports.map(
                                                                         (
                                                                             report,
                                                                         ) => (
-                                                                            <div
+                                                                            <Card
                                                                                 key={
                                                                                     report.id
                                                                                 }
-                                                                                className="flex flex-col items-start justify-between rounded-md border bg-background p-3 text-sm shadow-sm transition-shadow hover:shadow-md"
+                                                                                className="flex flex-col gap-3 p-4"
                                                                             >
-                                                                                <div className="flex w-full items-start gap-2">
-                                                                                    <FileText className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                                                                    <div className="min-w-0 flex-1">
+                                                                                <div className="flex items-start gap-2">
+                                                                                    <FileText className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                                                                                    <div>
                                                                                         <span className="block font-medium">
                                                                                             {format(
-                                                                                                report.startDate,
+                                                                                                new Date(report.startDate + 'T00:00:00'),
                                                                                                 'MMM dd',
                                                                                             )}{' '}
                                                                                             –{' '}
                                                                                             {format(
-                                                                                                report.endDate,
+                                                                                                new Date(report.endDate + 'T00:00:00'),
                                                                                                 'MMM dd',
                                                                                             )}
                                                                                         </span>
                                                                                         <span className="text-xs text-muted-foreground">
                                                                                             {format(
-                                                                                                report.endDate,
+                                                                                                new Date(report.endDate + 'T00:00:00'),
                                                                                                 'yyyy',
                                                                                             )}
                                                                                         </span>
@@ -305,16 +301,17 @@ export default function ArchivedReports({
                                                                                 </div>
 
                                                                                 <button
+                                                                                    type="button"
                                                                                     onClick={() =>
                                                                                         retrieveReport(
                                                                                             report.id,
                                                                                         )
                                                                                     }
-                                                                                    className="mt-2 text-xs font-medium text-primary hover:underline"
+                                                                                    className="text-xs font-medium text-primary hover:underline"
                                                                                 >
                                                                                     Retrieve
                                                                                 </button>
-                                                                            </div>
+                                                                            </Card>
                                                                         ),
                                                                     )}
                                                                 </div>

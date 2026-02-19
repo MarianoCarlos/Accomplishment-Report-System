@@ -7,11 +7,33 @@ import AppLayout from '@/layouts/app-layout';
 import { accomplishmentReport, userDashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
+export type ReportEntry = {
+    id: number;
+    content: string;
+};
+
 export type Report = {
     id: number;
-    startDate: Date;
-    endDate: Date;
-    entries: Record<string, string>; // key = YYYY-MM-DD, value = HTML
+    startDate: string;
+    endDate: string;
+    entries: Record<string, ReportEntry>; // key = YYYY-MM-DD
+    office?: string;
+    position?: string;
+    reviewer?: string;
+    approver?: string;
+};
+
+type PrintData = {
+    report: Report;
+    position: string;
+    office: string;
+    reviewer: string;
+    approver: string;
+} | null;
+
+type Props = {
+    activeReports: Report[];
+    archivedReports: Report[];
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -19,19 +41,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Accomplishment Report', href: accomplishmentReport().url },
 ];
 
-type PrintData = {
-    report: Report;
-    userName: string;
-    position: string;
-    office: string;
-    reviewer: string;
-    approver: string;
-} | null;
-
-export default function AccomplishmentReport() {
-    const [reports, setReports] = useState<Report[]>([]);
-    const [archivedReports, setArchivedReports] = useState<Report[]>([]);
-    const [nextId, setNextId] = useState(1);
+export default function AccomplishmentReport({ activeReports, archivedReports }: Props) {
     const [printData, setPrintData] = useState<PrintData>(null);
 
     return (
@@ -43,19 +53,13 @@ export default function AccomplishmentReport() {
 
                     <div className="flex flex-1 flex-col gap-6 p-4">
                         <ActiveReports
-                            reports={reports}
-                            setReports={setReports}
-                            setArchivedReports={setArchivedReports}
-                            nextId={nextId}
-                            setNextId={setNextId}
+                            reports={activeReports}
                             setPrintData={setPrintData}
                         />
 
                         {archivedReports.length > 0 && (
                             <ArchivedReports
                                 archivedReports={archivedReports}
-                                setArchivedReports={setArchivedReports}
-                                setReports={setReports}
                             />
                         )}
                     </div>
@@ -66,7 +70,6 @@ export default function AccomplishmentReport() {
             {printData && (
                 <ReportPrintTemplate
                     report={printData.report}
-                    userName={printData.userName}
                     position={printData.position}
                     office={printData.office}
                     reviewer={printData.reviewer}
