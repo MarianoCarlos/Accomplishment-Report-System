@@ -1,6 +1,6 @@
+import { Edit2, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,128 +23,188 @@ export default function PositionTab({
     onEditPosition,
     onDeletePosition,
 }: PositionTabProps) {
-    const [positionDialogOpen, setPositionDialogOpen] = useState(false);
-    const [editPositionDialogOpen, setEditPositionDialogOpen] = useState(false);
-    const [positionName, setPositionName] = useState('');
-    const [positionSearch, setPositionSearch] = useState('');
-    const [editingPosition, setEditingPosition] = useState<Position | null>(null);
+    // Form state
+    const [name, setName] = useState('');
+    const [search, setSearch] = useState('');
+    
+    // Current editing position
+    const [currentPosition, setCurrentPosition] = useState<Position | null>(null);
+    const [editName, setEditName] = useState('');
 
-    const filteredPositions = positions.filter(position =>
-        position.name.toLowerCase().includes(positionSearch.toLowerCase())
+    // Filter positions by search
+    const filtered = positions.filter(position =>
+        position.name.toLowerCase().includes(search.toLowerCase())
     );
 
-    const handleAddPosition = () => {
-        if (positionName.trim()) {
-            const newPosition = {
-                id: Math.max(0, ...positions.map(p => p.id)) + 1,
-                name: positionName
-            };
-            onAddPosition(newPosition);
-            setPositionName('');
-            setPositionDialogOpen(false);
-        }
+    // Add new position
+    const handleAdd = () => {
+        if (!name.trim()) return;
+        
+        const newPosition: Position = {
+            id: Math.max(0, ...positions.map(p => p.id)) + 1,
+            name: name.trim(),
+        };
+        
+        onAddPosition(newPosition);
+        setName('');
     };
 
-    const handleEditPosition = (position: Position) => {
-        setEditingPosition(position);
-        setPositionName(position.name);
-        setEditPositionDialogOpen(true);
+    // Edit position - start editing
+    const startEdit = (position: Position) => {
+        setCurrentPosition(position);
+        setEditName(position.name);
     };
 
-    const handleSavePosition = () => {
-        if (editingPosition && positionName.trim()) {
-            onEditPosition(editingPosition.id, positionName);
-        }
-        setEditingPosition(null);
-        setPositionName('');
-        setEditPositionDialogOpen(false);
+    // Save changes to position
+    const handleSave = () => {
+        if (!currentPosition || !editName.trim()) return;
+        
+        onEditPosition(currentPosition.id, editName.trim());
+        setCurrentPosition(null);
+        setEditName('');
     };
 
-    const handleDeleteClick = () => {
-        if (editingPosition) {
-            onDeletePosition(editingPosition.id);
-            setEditPositionDialogOpen(false);
-        }
+    // Delete position
+    const handleDelete = () => {
+        if (!currentPosition) return;
+        
+        onDeletePosition(currentPosition.id);
+        setCurrentPosition(null);
+        setEditName('');
+    };
+
+    // Cancel edit
+    const cancelEdit = () => {
+        setCurrentPosition(null);
+        setEditName('');
     };
 
     return (
         <div className="space-y-4">
-            <Button onClick={() => setPositionDialogOpen(true)}>Add Position</Button>
-            <Input 
-                placeholder="Search position..."
-                value={positionSearch}
-                onChange={(e) => setPositionSearch(e.target.value)}
-                className="max-w-xs"
-            />
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Position Name</TableHead>
-                        <TableHead>Action</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredPositions.map((position) => (
-                        <TableRow key={position.id}>
-                            <TableCell>{position.name}</TableCell>
-                            <TableCell>
-                                <Button variant="outline" size="sm" onClick={() => handleEditPosition(position)}>Edit</Button>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-
-            <Dialog open={positionDialogOpen} onOpenChange={setPositionDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add New Position</DialogTitle>
-                        <DialogDescription>Enter the position name</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="position-name">Position Name</Label>
+            {/* Add/Edit Position Form - Same Location */}
+            {currentPosition ? (
+                <div>
+                    <h3 className="text-base font-semibold mb-3">Edit Position</h3>
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <Label htmlFor="edit-name" className="text-sm">Position Name</Label>
                             <Input 
-                                id="position-name"
-                                placeholder="Enter position name"
-                                value={positionName}
-                                onChange={(e) => setPositionName(e.target.value)}
+                                id="edit-name"
+                                placeholder="e.g. Senior Developer"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="h-8 max-w-xs"
                             />
                         </div>
-                        <Button onClick={handleAddPosition} className="w-full">Add Position</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={editPositionDialogOpen} onOpenChange={setEditPositionDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit Position</DialogTitle>
-                        <DialogDescription>Update the position name</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-position-name">Position Name</Label>
-                            <Input 
-                                id="edit-position-name"
-                                placeholder="Enter position name"
-                                value={positionName}
-                                onChange={(e) => setPositionName(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                            <Button onClick={handleSavePosition} size="sm">Save Changes</Button>
+                        <div className="flex gap-2 pt-1">
                             <Button 
-                                variant="destructive" 
-                                onClick={handleDeleteClick}
+                                onClick={handleSave}
+                                disabled={!editName.trim()}
                                 size="sm"
                             >
-                                Delete Position
+                                Save
+                            </Button>
+                            <Button 
+                                variant="destructive"
+                                onClick={handleDelete}
+                                size="sm"
+                            >
+                                Delete
+                            </Button>
+                            <Button 
+                                variant="outline"
+                                onClick={cancelEdit}
+                                size="sm"
+                            >
+                                Cancel
                             </Button>
                         </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                </div>
+            ) : (
+                <div>
+                    <h3 className="text-base font-semibold mb-3">Add New Position</h3>
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <Label htmlFor="name" className="text-sm">Position Name</Label>
+                            <Input 
+                                id="name"
+                                placeholder="e.g. Senior Developer"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="h-8 max-w-xs"
+                            />
+                        </div>
+                        <Button onClick={handleAdd} disabled={!name.trim()} size="sm">
+                            Add Position
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Search input */}
+            <div className="space-y-2">
+                <Label htmlFor="search" className="text-sm font-medium">Search Positions</Label>
+                <div className="relative max-w-xs">
+                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input 
+                        id="search"
+                        placeholder="Search position..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="h-9 pl-8 text-sm"
+                    />
+                </div>
+            </div>
+
+            {/* Table */}
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <Table className="text-sm">
+                    <TableHeader className="bg-gray-50">
+                        <TableRow className="border-b border-gray-200">
+                            <TableHead className="h-10 font-semibold text-gray-700">Position Name</TableHead>
+                            <TableHead className="h-10 w-32 text-right font-semibold text-gray-700">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filtered.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={2} className="text-center py-8 text-gray-500">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Search className="h-5 w-5 text-gray-400" />
+                                        <p>No positions found</p>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            filtered.map((position, index) => (
+                                <TableRow 
+                                    key={position.id}
+                                    className={`border-b border-gray-200 ${
+                                        currentPosition?.id === position.id ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                    }`}
+                                >
+                                    <TableCell className="h-10 font-medium text-gray-900">
+                                        {position.name}
+                                    </TableCell>
+                                    <TableCell className="h-10 text-right">
+                                        <Button 
+                                            variant={currentPosition?.id === position.id ? "default" : "ghost"}
+                                            size="sm" 
+                                            onClick={() => startEdit(position)}
+                                            className="gap-1"
+                                        >
+                                            <Edit2 className="h-4 w-4" />
+                                            Edit
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+            <p className="text-xs text-gray-500">Showing {filtered.length} of {positions.length} positions</p>
         </div>
     );
 }

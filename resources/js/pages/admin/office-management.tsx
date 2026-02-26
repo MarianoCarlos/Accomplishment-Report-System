@@ -22,10 +22,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    offices: string[];
-    position: string;
     roles: string[];
-    status: string;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -40,11 +37,16 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function OfficeManagement() {
+    // State for offices
     const [offices, setOffices] = useState<Office[]>([]);
+
+    // State for positions
     const [positions, setPositions] = useState<Position[]>([]);
+
+    // State for users
     const [users, setUsers] = useState<User[]>([]);
 
-    // Office handlers
+    // ============ Office Handlers ============
     const handleAddOffice = (office: Office) => {
         setOffices([...offices, office]);
     };
@@ -59,7 +61,7 @@ export default function OfficeManagement() {
         setOffices(offices.filter(office => office.id !== officeId));
     };
 
-    // Position handlers
+    // ============ Position Handlers ============
     const handleAddPosition = (position: Position) => {
         setPositions([...positions, position]);
     };
@@ -74,16 +76,14 @@ export default function OfficeManagement() {
         setPositions(positions.filter(position => position.id !== positionId));
     };
 
-    // User handlers
+    // ============ User Handlers ============
     const handleAddUser = (user: User) => {
         setUsers([...users, user]);
     };
 
     const handleEditUser = (userId: number, userUpdates: Omit<User, 'id'>) => {
         setUsers(users.map(user =>
-            user.id === userId
-                ? { ...user, ...userUpdates }
-                : user
+            user.id === userId ? { ...user, ...userUpdates } : user
         ));
     };
 
@@ -94,15 +94,17 @@ export default function OfficeManagement() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Office Management" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="space-y-4 p-4">
                 <h1 className="text-3xl font-bold">Office Management</h1>
+
                 <Tabs defaultValue="office" className="w-full">
                     <TabsList>
-                        <TabsTrigger value="office">Office</TabsTrigger>
+                        <TabsTrigger value="office">Offices</TabsTrigger>
                         <TabsTrigger value="positions">Positions</TabsTrigger>
                         <TabsTrigger value="users">Users</TabsTrigger>
                     </TabsList>
 
+                    {/* Offices Tab */}
                     <TabsContent value="office">
                         <OfficeTab
                             offices={offices}
@@ -112,6 +114,7 @@ export default function OfficeManagement() {
                         />
                     </TabsContent>
 
+                    {/* Positions Tab */}
                     <TabsContent value="positions">
                         <PositionTab
                             positions={positions}
@@ -121,6 +124,7 @@ export default function OfficeManagement() {
                         />
                     </TabsContent>
 
+                    {/* Users Tab */}
                     <TabsContent value="users">
                         <UserTab
                             users={users}
