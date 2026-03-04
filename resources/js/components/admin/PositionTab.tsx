@@ -39,13 +39,12 @@ export default function PositionTab({
     // Add new position
     const handleAdd = () => {
         if (!name.trim()) return;
-        
-        const newPosition: Position = {
-            id: Math.max(0, ...positions.map(p => p.id)) + 1,
+
+        onAddPosition({
+            id: 0, // temporary placeholder (backend generates real ID)
             name: name.trim(),
-        };
-        
-        onAddPosition(newPosition);
+        });
+
         setName('');
     };
 

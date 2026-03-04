@@ -59,12 +59,32 @@ function countCompletedDays(report: Report) {
     return { completed, total };
 }
 
+interface Office {
+    id: number;
+    name: string;
+}
+
+interface Position {
+    id: number;
+    name: string;
+}
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+}
+
 type Props = {
     reports: Report[];
     setPrintData: (data: PrintData) => void;
+    offices: Office[];
+    positions: Position[];
+    users: User[];
 };
 
-export default function ActiveReports({ reports, setPrintData }: Props) {
+export default function ActiveReports({ reports, setPrintData, offices, positions, users }: Props) {
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [open, setOpen] = useState(false);
     const [range, setRange] = useState<DateRange | undefined>();
@@ -366,6 +386,9 @@ export default function ActiveReports({ reports, setPrintData }: Props) {
                     isOpen={isPrintModalOpen}
                     onClose={() => setIsPrintModalOpen(false)}
                     report={expandedReport ?? null}
+                    offices={offices}
+                    positions={positions}
+                    users={users}
                     onConfirm={(reviewer, approver, modalOffice, modalPosition) => {
                         if (!expandedReport) return;
 

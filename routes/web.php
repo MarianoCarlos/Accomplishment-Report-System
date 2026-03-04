@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportEntryController;
+use App\Http\Controllers\OfficeController;
+use App\Http\Controllers\PositionController;
+use App\Http\Controllers\Admin\OfficeManagementController;
+use App\Http\Controllers\Admin\UserManagementController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -12,15 +16,26 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// Fallback dashboard that redirects based on role
 Route::get('dashboard', function () {
-    return Inertia::render('dashboard');
+    if (auth()->user()->role === 'Admin') {
+        return redirect('/admin-dashboard');
+    }
+    return redirect('/user-dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+// User/Employee Dashboard
 Route::get('user-dashboard', function () {
     return Inertia::render('user/user-dashboard');
-})->middleware(['auth', 'verified'])->name('user-dashboard');
+})->middleware(['auth', 'verified', 'role:Employee'])->name('user-dashboard');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+// Admin Dashboard
+Route::get('admin-dashboard', function () {
+    return Inertia::render('admin/admin-dashboard');
+})->middleware(['auth', 'verified', 'role:Admin'])->name('admin-dashboard');
+
+// Employee Report Routes
+Route::middleware(['auth', 'verified', 'role:Employee'])->group(function () {
     Route::get('/accomplishment-report', [ReportController::class, 'index'])
         ->name('accomplishment-report');
 
@@ -43,12 +58,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('report-entries.update');
 });
 
-Route::get('admin-dashboard', function () {
-    return Inertia::render('admin/admin-dashboard');
-})->middleware(['auth', 'verified'])->name('admin-dashboard');
+// Admin Routes - Protected
+Route::middleware(['auth', 'verified', 'role:Admin'])->group(function () {
+    Route::get('/admin/office-management', [OfficeManagementController::class, 'index'])
+        ->name('admin.office-management');
 
-Route::get('office-management', function () {
-    return Inertia::render('admin/office-management');
-})->middleware(['auth', 'verified'])->name('office-management');
+    Route::resource('offices', OfficeController::class);
+
+    Route::resource('positions', PositionController::class);
+
+    Route::resource('admin/users', UserManagementController::class);
+});
 
 require __DIR__.'/settings.php';
+

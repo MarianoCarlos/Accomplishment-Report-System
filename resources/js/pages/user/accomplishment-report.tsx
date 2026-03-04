@@ -31,9 +31,30 @@ type PrintData = {
     approver: string;
 } | null;
 
+interface Office {
+    id: number;
+    name: string;
+}
+
+interface Position {
+    id: number;
+    name: string;
+}
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    position_id?: number;
+}
+
 type Props = {
     activeReports: Report[];
     archivedReports: Report[];
+    offices: Office[];
+    positions: Position[];
+    users: User[];
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -41,7 +62,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Accomplishment Report', href: accomplishmentReport().url },
 ];
 
-export default function AccomplishmentReport({ activeReports, archivedReports }: Props) {
+export default function AccomplishmentReport({ activeReports, archivedReports, offices, positions, users }: Props) {
     const [printData, setPrintData] = useState<PrintData>(null);
 
     return (
@@ -55,6 +76,9 @@ export default function AccomplishmentReport({ activeReports, archivedReports }:
                         <ActiveReports
                             reports={activeReports}
                             setPrintData={setPrintData}
+                            offices={offices}
+                            positions={positions}
+                            users={users}
                         />
 
                         {archivedReports.length > 0 && (

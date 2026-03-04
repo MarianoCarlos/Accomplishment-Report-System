@@ -1,6 +1,6 @@
 import { usePage } from '@inertiajs/react';
-import { Printer } from 'lucide-react';
-import { useState } from 'react';
+import { Printer, X, Search } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -13,10 +13,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Report } from '@/pages/user/accomplishment-report';
 
+interface Office {
+    id: number;
+    name: string;
+}
+
+interface Position {
+    id: number;
+    name: string;
+}
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    position_id?: number;
+}
+
 type PageProps = {
     auth: {
         user: {
             name: string;
+            position_id?: number;
         };
     };
 };
@@ -25,6 +44,9 @@ type Props = {
     isOpen: boolean;
     onClose: () => void;
     report: Report | null;
+    offices: Office[];
+    positions: Position[];
+    users: User[];
     onConfirm: (
         reviewer: string,
         approver: string,
@@ -37,21 +59,126 @@ export default function PrintReportModal({
     isOpen,
     onClose,
     report,
+    offices,
+    positions,
+    users,
     onConfirm,
 }: Props) {
     const { auth } = usePage<PageProps>().props;
     const userName = auth.user.name;
+    const userPositionId = auth.user.position_id;
+    const userPositionName = userPositionId
+        ? positions.find(p => p.id === userPositionId)?.name ?? ''
+        : '';
 
-    const [reviewer, setReviewer] = useState(report?.reviewer ?? '');
-    const [approver, setApprover] = useState(report?.approver ?? '');
-    const [office, setOffice] = useState(report?.office ?? '');
-    const [position, setPosition] = useState(report?.position ?? '');
+    const [selectedOffice, setSelectedOffice] = useState(report?.office ?? '');
+    const [selectedPosition, setSelectedPosition] = useState((userPositionName || report?.position) ?? '');
+    const [selectedReviewer, setSelectedReviewer] = useState(report?.reviewer ?? '');
+    const [selectedApprover, setSelectedApprover] = useState(report?.approver ?? '');
+
+    // Search states for user selectors
+    const [reviewerSearch, setReviewerSearch] = useState('');
+    const [approverSearch, setApproverSearch] = useState('');
+    const [showReviewerDropdown, setShowReviewerDropdown] = useState(false);
+    const [showApproverDropdown, setShowApproverDropdown] = useState(false);
+
+    const reviewerRef = useRef<HTMLDivElement>(null);
+    const approverRef = useRef<HTMLDivElement>(null);
+    const officeRef = useRef<HTMLDivElement>(null);
+
+    // Office search state
+    const [officeSearch, setOfficeSearch] = useState('');
+    const [showOfficeDropdown, setShowOfficeDropdown] = useState(false);
+
+    // Validation errors state
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Sync form state when report changes
+    useEffect(() => {
+        if (report) {
+            setSelectedOffice(report.office ?? '');
+            // Always use user's assigned position, not the report's position
+            setSelectedPosition((userPositionName || report?.position) ?? '');
+            setSelectedReviewer(report.reviewer ?? '');
+            setSelectedApprover(report.approver ?? '');
+            // Keep search and dropdown closed when modal opens
+            setReviewerSearch('');
+            setApproverSearch('');
+            setOfficeSearch('');
+            setShowReviewerDropdown(false);
+            setShowApproverDropdown(false);
+            setShowOfficeDropdown(false);
+            // Clear previous errors
+            setErrors({});
+        }
+    }, [report, isOpen, userPositionName]);
+
+    // Handle click outside for dropdowns
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (reviewerRef.current && !reviewerRef.current.contains(event.target as Node)) {
+                setShowReviewerDropdown(false);
+            }
+            if (approverRef.current && !approverRef.current.contains(event.target as Node)) {
+                setShowApproverDropdown(false);
+            }
+            if (officeRef.current && !officeRef.current.contains(event.target as Node)) {
+                setShowOfficeDropdown(false);
+            }
+        };
+
+        if (showReviewerDropdown || showApproverDropdown || showOfficeDropdown) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
+    }, [showReviewerDropdown, showApproverDropdown, showOfficeDropdown]);
+
+    // Helper function to get position name
+    const getPositionName = (positionId?: number) => {
+        if (!positionId) return '';
+        return positions.find(p => p.id === positionId)?.name ?? '';
+    };
+
+    // Filter offices based on search
+    const filteredOffices = offices.filter(office =>
+        office.name.toLowerCase().includes(officeSearch.toLowerCase())
+    );
+
+    // Filter users based on search
+    const filteredReviewers = users.filter(user =>
+        user.name.toLowerCase().includes(reviewerSearch.toLowerCase()) ||
+        user.email.toLowerCase().includes(reviewerSearch.toLowerCase())
+    );
+
+    const filteredApprovers = users.filter(user =>
+        user.name.toLowerCase().includes(approverSearch.toLowerCase()) ||
+        user.email.toLowerCase().includes(approverSearch.toLowerCase())
+    );
+
+    // Get selected user objects and display names
+    const reviewerUser = users.find(u => u.name === selectedReviewer);
+    const reviewerName = reviewerUser
+        ? `${reviewerUser.name}${reviewerUser.position_id ? `, ${getPositionName(reviewerUser.position_id)}` : ''}`
+        : '';
+    const approverUser = users.find(u => u.name === selectedApprover);
+    const approverName = approverUser
+        ? `${approverUser.name}${approverUser.position_id ? `, ${getPositionName(approverUser.position_id)}` : ''}`
+        : '';
+    const officeName = offices.find(o => o.name === selectedOffice)?.name || '';
 
     const resetFields = () => {
-        setReviewer('');
-        setApprover('');
-        setOffice('');
-        setPosition('');
+        setSelectedOffice('');
+        setSelectedPosition('');
+        setSelectedReviewer('');
+        setSelectedApprover('');
+        setReviewerSearch('');
+        setApproverSearch('');
+        setOfficeSearch('');
+        setShowReviewerDropdown(false);
+        setShowApproverDropdown(false);
+        setShowOfficeDropdown(false);
     };
 
     const handleClose = () => {
@@ -60,7 +187,31 @@ export default function PrintReportModal({
     };
 
     const handlePrint = () => {
-        onConfirm(reviewer, approver, office, position);
+        // Validate all required fields
+        const newErrors: Record<string, string> = {};
+        
+        if (!selectedOffice.trim()) {
+            newErrors.office = 'Office is required';
+        }
+        if (!selectedPosition.trim()) {
+            newErrors.position = 'Position is required';
+        }
+        if (!selectedReviewer.trim()) {
+            newErrors.reviewer = 'Reviewer is required';
+        }
+        if (!selectedApprover.trim()) {
+            newErrors.approver = 'Approver is required';
+        }
+
+        // If there are errors, show them and don't submit
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        // Clear errors on successful submission
+        setErrors({});
+        onConfirm(selectedReviewer, selectedApprover, selectedOffice, selectedPosition);
         resetFields();
     };
 
@@ -75,7 +226,7 @@ export default function PrintReportModal({
                         <DialogTitle>Print Accomplishment Report</DialogTitle>
                     </div>
                     <DialogDescription>
-                        Fill out the required information before printing.
+                        Select office, position, and approvers before printing.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -90,49 +241,254 @@ export default function PrintReportModal({
                         />
                     </div>
 
-                    {/* Office */}
-                    <div className="space-y-2">
-                        <Label htmlFor="office">Office</Label>
-                        <Input
-                            id="office"
-                            value={office}
-                            onChange={(e) => setOffice(e.target.value)}
-                            placeholder="Enter office"
-                        />
-                    </div>
+                    {/* Office - Searchable Select */}
+                    {offices.length > 0 && (
+                        <div className="space-y-2">
+                            <Label htmlFor="office">Office</Label>
+                            <div className="relative" ref={officeRef}>
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <Input
+                                        id="office"
+                                        placeholder="Search office..."
+                                        value={showOfficeDropdown ? officeSearch : officeName}
+                                        onChange={(e) => {
+                                            setOfficeSearch(e.target.value);
+                                            setShowOfficeDropdown(true);
+                                            if (e.target.value) {
+                                                setErrors(prev => {
+                                                    const newErrors = { ...prev };
+                                                    delete newErrors.office;
+                                                    return newErrors;
+                                                });
+                                            }
+                                        }}
+                                        onFocus={() => setShowOfficeDropdown(true)}
+                                        className={`pl-8 h-9 ${
+                                            errors.office ? 'border-red-500' : ''
+                                        }`}
+                                    />
+                                    {selectedOffice && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedOffice('');
+                                                setOfficeSearch('');
+                                            }}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
 
-                    {/* Position */}
-                    <div className="space-y-2">
-                        <Label htmlFor="position">Position</Label>
-                        <Input
-                            id="position"
-                            value={position}
-                            onChange={(e) => setPosition(e.target.value)}
-                            placeholder="Enter position"
-                        />
-                    </div>
+                                {/* Office Dropdown List */}
+                                {showOfficeDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
+                                        {filteredOffices.length > 0 ? (
+                                            filteredOffices.map((office) => (
+                                                <button
+                                                    key={office.id}
+                                                    onClick={() => {
+                                                        setSelectedOffice(office.name);
+                                                        setOfficeSearch('');
+                                                        setShowOfficeDropdown(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                                                >
+                                                    <div className="font-medium">{office.name}</div>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-3 py-2 text-sm text-gray-500">
+                                                No offices found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {errors.office && (
+                                <p className="text-xs text-red-500 mt-1">{errors.office}</p>
+                            )}
+                        </div>
+                    )}
 
-                    {/* Reviewer */}
-                    <div className="space-y-2">
-                        <Label htmlFor="reviewer">Reviewer</Label>
-                        <Input
-                            id="reviewer"
-                            value={reviewer}
-                            onChange={(e) => setReviewer(e.target.value)}
-                            placeholder="Enter reviewer name"
-                        />
-                    </div>
+                    {/* Position - Read Only (Auto-filled from assigned position) */}
+                    {positions.length > 0 && (
+                        <div className="space-y-2">
+                            <Label htmlFor="position">Position</Label>
+                            <Input
+                                id="position"
+                                value={selectedPosition}
+                                disabled
+                                className="bg-muted/40 cursor-not-allowed"
+                            />
+                            {!selectedPosition && (
+                                <p className="text-xs text-amber-600">No position assigned. Please contact admin.</p>
+                            )}
+                        </div>
+                    )}
 
-                    {/* Approver */}
-                    <div className="space-y-2">
-                        <Label htmlFor="approver">Approver</Label>
-                        <Input
-                            id="approver"
-                            value={approver}
-                            onChange={(e) => setApprover(e.target.value)}
-                            placeholder="Enter approver name"
-                        />
-                    </div>
+                    {/* Reviewer - Searchable Select */}
+                    {users.length > 0 && (
+                        <div className="space-y-2">
+                            <Label htmlFor="reviewer">Reviewer</Label>
+                            <div className="relative" ref={reviewerRef}>
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <Input
+                                        id="reviewer"
+                                        placeholder="Search reviewer..."
+                                        value={showReviewerDropdown ? reviewerSearch : reviewerName}
+                                        onChange={(e) => {
+                                            setReviewerSearch(e.target.value);
+                                            setShowReviewerDropdown(true);
+                                            if (e.target.value) {
+                                                setErrors(prev => {
+                                                    const newErrors = { ...prev };
+                                                    delete newErrors.reviewer;
+                                                    return newErrors;
+                                                });
+                                            }
+                                        }}
+                                        onFocus={() => setShowReviewerDropdown(true)}
+                                        className={`pl-8 h-9 ${
+                                            errors.reviewer ? 'border-red-500' : ''
+                                        }`}
+                                    />
+                                    {selectedReviewer && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedReviewer('');
+                                                setReviewerSearch('');
+                                            }}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Reviewer Dropdown List */}
+                                {showReviewerDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
+                                        {filteredReviewers.length > 0 ? (
+                                            filteredReviewers.map((user) => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => {
+                                                        setSelectedReviewer(user.name);
+                                                        // Auto-fill position if user has position assigned
+                                                        if (user.position_id) {
+                                                            setSelectedPosition(getPositionName(user.position_id));
+                                                        }
+                                                        setReviewerSearch('');
+                                                        setShowReviewerDropdown(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                                                >
+                                                    <div className="font-medium">
+                                                        {user.name}
+                                                        {user.position_id && (
+                                                            <span className="text-gray-600">, {getPositionName(user.position_id)}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">{user.email}</div>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-3 py-2 text-sm text-gray-500">
+                                                No users found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {errors.reviewer && (
+                                <p className="text-xs text-red-500 mt-1">{errors.reviewer}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Approver - Searchable Select */}
+                    {users.length > 0 && (
+                        <div className="space-y-2">
+                            <Label htmlFor="approver">Approver</Label>
+                            <div className="relative" ref={approverRef}>
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <Input
+                                        id="approver"
+                                        placeholder="Search approver..."
+                                        value={showApproverDropdown ? approverSearch : approverName}
+                                        onChange={(e) => {
+                                            setApproverSearch(e.target.value);
+                                            setShowApproverDropdown(true);
+                                            if (e.target.value) {
+                                                setErrors(prev => {
+                                                    const newErrors = { ...prev };
+                                                    delete newErrors.approver;
+                                                    return newErrors;
+                                                });
+                                            }
+                                        }}
+                                        onFocus={() => setShowApproverDropdown(true)}
+                                        className={`pl-8 h-9 ${
+                                            errors.approver ? 'border-red-500' : ''
+                                        }`}
+                                    />
+                                    {selectedApprover && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedApprover('');
+                                                setApproverSearch('');
+                                            }}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Approver Dropdown List */}
+                                {showApproverDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
+                                        {filteredApprovers.length > 0 ? (
+                                            filteredApprovers.map((user) => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => {
+                                                        setSelectedApprover(user.name);
+                                                        // Auto-fill position if user has position assigned
+                                                        if (user.position_id) {
+                                                            setSelectedPosition(getPositionName(user.position_id));
+                                                        }
+                                                        setApproverSearch('');
+                                                        setShowApproverDropdown(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                                                >
+                                                    <div className="font-medium">
+                                                        {user.name}
+                                                        {user.position_id && (
+                                                            <span className="text-gray-600">, {getPositionName(user.position_id)}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">{user.email}</div>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-3 py-2 text-sm text-gray-500">
+                                                No users found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {errors.approver && (
+                                <p className="text-xs text-red-500 mt-1">{errors.approver}</p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -144,14 +500,14 @@ export default function PrintReportModal({
                     <Button
                         onClick={handlePrint}
                         disabled={
-                            !reviewer.trim() ||
-                            !approver.trim() ||
-                            !office.trim() ||
-                            !position.trim()
+                            !selectedReviewer.trim() ||
+                            !selectedApprover.trim() ||
+                            !selectedOffice.trim() ||
+                            !selectedPosition.trim()
                         }
-                        className="min-w-[110px]"
                     >
-                        Print Report
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print
                     </Button>
                 </div>
             </DialogContent>

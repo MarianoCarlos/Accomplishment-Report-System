@@ -2,7 +2,6 @@ import { Edit2, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,18 +16,26 @@ interface User {
     id: number;
     name: string;
     email: string;
-    roles: string[];
+    role: string;
+    position_id?: number;
+}
+
+interface Position {
+    id: number;
+    name: string;
 }
 
 interface UserTabProps {
     users: User[];
-    onAddUser: (user: User) => void;
+    positions: Position[];
+    onAddUser: (user: Omit<User, 'id'>) => void;
     onEditUser: (userId: number, user: Omit<User, 'id'>) => void;
     onDeleteUser: (userId: number) => void;
 }
 
 export default function UserTab({
     users,
+    positions,
     onAddUser,
     onEditUser,
     onDeleteUser,
@@ -36,14 +43,16 @@ export default function UserTab({
     // Form state for adding
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [roles, setRoles] = useState<string[]>([]);
+    const [role, setRole] = useState('Employee');
+    const [position, setPosition] = useState<number | null>(null);
     const [search, setSearch] = useState('');
     
     // Current editing user
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [editName, setEditName] = useState('');
     const [editEmail, setEditEmail] = useState('');
-    const [editRoles, setEditRoles] = useState<string[]>([]);
+    const [editRole, setEditRole] = useState('Employee');
+    const [editPosition, setEditPosition] = useState<number | null>(null);
 
     // Available roles
     const ROLES = ['Employee', 'Admin', 'Supervisor'];
@@ -58,17 +67,17 @@ export default function UserTab({
     const handleAdd = () => {
         if (!name.trim() || !email.trim()) return;
         
-        const newUser: User = {
-            id: Math.max(0, ...users.map(u => u.id)) + 1,
+        onAddUser({
             name: name.trim(),
             email: email.trim(),
-            roles: roles.length > 0 ? roles : ['Employee'],
-        };
+            role,
+            position_id: position || undefined,
+        });
         
-        onAddUser(newUser);
         setName('');
         setEmail('');
-        setRoles([]);
+        setRole('Employee');
+        setPosition(null);
     };
 
     // Edit user - start editing
@@ -76,7 +85,8 @@ export default function UserTab({
         setCurrentUser(user);
         setEditName(user.name);
         setEditEmail(user.email);
-        setEditRoles(user.roles);
+        setEditRole(user.role);
+        setEditPosition(user.position_id || null);
     };
 
     // Save changes to user
@@ -86,13 +96,15 @@ export default function UserTab({
         onEditUser(currentUser.id, {
             name: editName.trim(),
             email: editEmail.trim(),
-            roles: editRoles.length > 0 ? editRoles : ['Employee'],
+            role: editRole,
+            position_id: editPosition || undefined,
         });
         
         setCurrentUser(null);
         setEditName('');
         setEditEmail('');
-        setEditRoles([]);
+        setEditRole('Employee');
+        setEditPosition(null);
     };
 
     // Delete user
@@ -103,7 +115,7 @@ export default function UserTab({
         setCurrentUser(null);
         setEditName('');
         setEditEmail('');
-        setEditRoles([]);
+        setEditRole('Employee');
     };
 
     // Cancel edit
@@ -111,21 +123,8 @@ export default function UserTab({
         setCurrentUser(null);
         setEditName('');
         setEditEmail('');
-        setEditRoles([]);
-    };
-
-    // Toggle role for add form
-    const toggleRole = (role: string) => {
-        setRoles(prev =>
-            prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
-        );
-    };
-
-    // Toggle role for edit form
-    const toggleEditRole = (role: string) => {
-        setEditRoles(prev =>
-            prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
-        );
+        setEditRole('Employee');
+        setEditPosition(null);
     };
 
     return (
@@ -160,24 +159,42 @@ export default function UserTab({
                             </div>
                         </div>
 
-                        {/* Roles */}
+                        {/* Role */}
                         <div className="space-y-1">
-                            <Label className="text-sm">Roles</Label>
-                            <div className="flex gap-4">
-                                {ROLES.map((role) => (
-                                    <div key={role} className="flex items-center gap-2">
-                                        <Checkbox 
-                                            id={`edit-role-${role}`}
-                                            checked={editRoles.includes(role)}
-                                            onCheckedChange={() => toggleEditRole(role)}
-                                        />
-                                        <Label htmlFor={`edit-role-${role}`} className="font-normal cursor-pointer text-sm">
-                                            {role}
-                                        </Label>
-                                    </div>
+                            <Label htmlFor="edit-role" className="text-sm">Role</Label>
+                            <select
+                                id="edit-role"
+                                value={editRole}
+                                onChange={(e) => setEditRole(e.target.value)}
+                                className="h-8 px-3 border border-gray-300 rounded-md text-sm"
+                            >
+                                {ROLES.map((r) => (
+                                    <option key={r} value={r}>
+                                        {r}
+                                    </option>
                                 ))}
-                            </div>
+                            </select>
                         </div>
+
+                        {/* Position */}
+                        {positions.length > 0 && (
+                            <div className="space-y-1">
+                                <Label htmlFor="edit-position" className="text-sm">Position</Label>
+                                <select
+                                    id="edit-position"
+                                    value={editPosition || ''}
+                                    onChange={(e) => setEditPosition(e.target.value ? Number(e.target.value) : null)}
+                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
+                                >
+                                    <option value="">-- Select Position --</option>
+                                    {positions.map((pos) => (
+                                        <option key={pos.id} value={pos.id}>
+                                            {pos.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Action buttons */}
                         <div className="flex gap-2 pt-1">
@@ -234,24 +251,42 @@ export default function UserTab({
                             </div>
                         </div>
 
-                        {/* Roles */}
+                        {/* Role */}
                         <div className="space-y-1">
-                            <Label className="text-sm">Roles</Label>
-                            <div className="flex gap-4">
-                                {ROLES.map((role) => (
-                                    <div key={role} className="flex items-center gap-2">
-                                        <Checkbox 
-                                            id={`role-${role}`}
-                                            checked={roles.includes(role)}
-                                            onCheckedChange={() => toggleRole(role)}
-                                        />
-                                        <Label htmlFor={`role-${role}`} className="font-normal cursor-pointer text-sm">
-                                            {role}
-                                        </Label>
-                                    </div>
+                            <Label htmlFor="role" className="text-sm">Role</Label>
+                            <select
+                                id="role"
+                                value={role}
+                                onChange={(e) => setRole(e.target.value)}
+                                className="h-8 px-3 border border-gray-300 rounded-md text-sm"
+                            >
+                                {ROLES.map((r) => (
+                                    <option key={r} value={r}>
+                                        {r}
+                                    </option>
                                 ))}
-                            </div>
+                            </select>
                         </div>
+
+                        {/* Position */}
+                        {positions.length > 0 && (
+                            <div className="space-y-1">
+                                <Label htmlFor="position" className="text-sm">Position</Label>
+                                <select
+                                    id="position"
+                                    value={position || ''}
+                                    onChange={(e) => setPosition(e.target.value ? Number(e.target.value) : null)}
+                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
+                                >
+                                    <option value="">-- Select Position --</option>
+                                    {positions.map((pos) => (
+                                        <option key={pos.id} value={pos.id}>
+                                            {pos.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Submit button */}
                         <Button 
@@ -287,14 +322,15 @@ export default function UserTab({
                         <TableRow className="border-b border-gray-200">
                             <TableHead className="h-10 font-semibold text-gray-700">Name</TableHead>
                             <TableHead className="h-10 font-semibold text-gray-700">Email</TableHead>
-                            <TableHead className="h-10 font-semibold text-gray-700">Roles</TableHead>
+                            <TableHead className="h-10 font-semibold text-gray-700">Role</TableHead>
+                            <TableHead className="h-10 font-semibold text-gray-700">Position</TableHead>
                             <TableHead className="h-10 w-32 text-right font-semibold text-gray-700">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filtered.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                                     <div className="flex flex-col items-center gap-2">
                                         <Search className="h-5 w-5 text-gray-400" />
                                         <p>No users found</p>
@@ -316,17 +352,15 @@ export default function UserTab({
                                         {user.email}
                                     </TableCell>
                                     <TableCell className="h-10">
-                                        <div className="flex gap-1 flex-wrap">
-                                            {user.roles.map((role) => (
-                                                <Badge 
-                                                    key={role} 
-                                                    variant={role === 'Admin' ? 'default' : 'secondary'} 
-                                                    className="text-xs"
-                                                >
-                                                    {role}
-                                                </Badge>
-                                            ))}
-                                        </div>
+                                        <Badge 
+                                            variant={user.role === 'Admin' ? 'default' : 'secondary'} 
+                                            className="text-xs"
+                                        >
+                                            {user.role}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="h-10 text-gray-600 text-xs">
+                                        {user.position_id ? positions.find(p => p.id === user.position_id)?.name : '—'}
                                     </TableCell>
                                     <TableCell className="h-10 text-right">
                                         <Button 

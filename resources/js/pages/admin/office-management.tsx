@@ -1,11 +1,9 @@
-import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
 import OfficeTab from '@/components/admin/OfficeTab';
 import PositionTab from '@/components/admin/PositionTab';
 import UserTab from '@/components/admin/UserTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
-import { adminDashboard, officeManagement } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 interface Office {
@@ -22,73 +20,63 @@ interface User {
     id: number;
     name: string;
     email: string;
-    roles: string[];
+    role: string;
+    position_id?: number;
+}
+
+interface Props {
+    offices: Office[];
+    positions: Position[];
+    users: User[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: adminDashboard().url,
-    },
-    {
-        title: 'Office Management',
-        href: officeManagement().url,
-    },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Office Management', href: '/admin/office-management' },
 ];
 
-export default function OfficeManagement() {
-    // State for offices
-    const [offices, setOffices] = useState<Office[]>([]);
-
-    // State for positions
-    const [positions, setPositions] = useState<Position[]>([]);
-
-    // State for users
-    const [users, setUsers] = useState<User[]>([]);
-
-    // ============ Office Handlers ============
-    const handleAddOffice = (office: Office) => {
-        setOffices([...offices, office]);
+export default function OfficeManagement({
+    offices,
+    positions,
+    users,
+}: Props) {
+    // ===== OFFICE HANDLERS =====
+    const handleAddOffice = (office: { name: string }) => {
+        router.post('/offices', { name: office.name });
     };
 
     const handleEditOffice = (officeId: number, newName: string) => {
-        setOffices(offices.map(office =>
-            office.id === officeId ? { ...office, name: newName } : office
-        ));
+        router.put(`/offices/${officeId}`, { name: newName });
     };
 
     const handleDeleteOffice = (officeId: number) => {
-        setOffices(offices.filter(office => office.id !== officeId));
+        router.delete(`/offices/${officeId}`);
     };
 
-    // ============ Position Handlers ============
-    const handleAddPosition = (position: Position) => {
-        setPositions([...positions, position]);
+    // ===== POSITION HANDLERS =====
+    const handleAddPosition = (position: { name: string }) => {
+        router.post('/positions', { name: position.name });
     };
 
     const handleEditPosition = (positionId: number, newName: string) => {
-        setPositions(positions.map(position =>
-            position.id === positionId ? { ...position, name: newName } : position
-        ));
+        router.put(`/positions/${positionId}`, { name: newName });
     };
 
     const handleDeletePosition = (positionId: number) => {
-        setPositions(positions.filter(position => position.id !== positionId));
+        router.delete(`/positions/${positionId}`);
     };
 
-    // ============ User Handlers ============
-    const handleAddUser = (user: User) => {
-        setUsers([...users, user]);
+    // ===== USER HANDLERS =====
+    const handleAddUser = (user: Omit<User, 'id'>) => {
+        router.post('/admin/users', user);
     };
 
-    const handleEditUser = (userId: number, userUpdates: Omit<User, 'id'>) => {
-        setUsers(users.map(user =>
-            user.id === userId ? { ...user, ...userUpdates } : user
-        ));
+    const handleEditUser = (userId: number, user: Omit<User, 'id'>) => {
+        router.put(`/admin/users/${userId}`, user);
     };
 
     const handleDeleteUser = (userId: number) => {
-        setUsers(users.filter(user => user.id !== userId));
+        router.delete(`/admin/users/${userId}`);
     };
 
     return (
@@ -108,7 +96,9 @@ export default function OfficeManagement() {
                     <TabsContent value="office">
                         <OfficeTab
                             offices={offices}
-                            onAddOffice={handleAddOffice}
+                            onAddOffice={(office) =>
+                                handleAddOffice({ name: office.name })
+                            }
                             onEditOffice={handleEditOffice}
                             onDeleteOffice={handleDeleteOffice}
                         />
@@ -118,7 +108,9 @@ export default function OfficeManagement() {
                     <TabsContent value="positions">
                         <PositionTab
                             positions={positions}
-                            onAddPosition={handleAddPosition}
+                            onAddPosition={(position) =>
+                                handleAddPosition({ name: position.name })
+                            }
                             onEditPosition={handleEditPosition}
                             onDeletePosition={handleDeletePosition}
                         />
@@ -128,6 +120,7 @@ export default function OfficeManagement() {
                     <TabsContent value="users">
                         <UserTab
                             users={users}
+                            positions={positions}
                             onAddUser={handleAddUser}
                             onEditUser={handleEditUser}
                             onDeleteUser={handleDeleteUser}

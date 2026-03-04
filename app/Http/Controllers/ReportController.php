@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreReportRequest;
 use App\Http\Requests\UpdatePrintDetailsRequest;
 use App\Models\Report;
+use App\Models\Office;
+use App\Models\Position;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
@@ -22,6 +25,9 @@ class ReportController extends Controller
         return Inertia::render('user/accomplishment-report', [
             'activeReports' => $this->transformReports($active),
             'archivedReports' => $this->transformReports($archived),
+            'offices' => Office::orderBy('name')->get(),
+            'positions' => Position::orderBy('name')->get(),
+            'users' => User::orderBy('name')->get(),
         ]);
     }
 
@@ -31,6 +37,7 @@ class ReportController extends Controller
         $end = $request->end_date;
 
         $exists = Report::where('user_id', auth()->id())
+            ->where('is_archived', false)
             ->where(function ($query) use ($start, $end) {
                 $query->whereBetween('start_date', [$start, $end])
                     ->orWhereBetween('end_date', [$start, $end])

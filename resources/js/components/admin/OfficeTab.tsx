@@ -39,13 +39,12 @@ export default function OfficeTab({
     // Add new office
     const handleAdd = () => {
         if (!name.trim()) return;
-        
-        const newOffice: Office = {
-            id: Math.max(0, ...offices.map(o => o.id)) + 1,
+
+        onAddOffice({
+            id: 0, // placeholder only
             name: name.trim(),
-        };
-        
-        onAddOffice(newOffice);
+        });
+
         setName('');
     };
 

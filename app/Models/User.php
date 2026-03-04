@@ -22,6 +22,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'position_id',
     ];
 
     /**
@@ -35,6 +37,14 @@ class User extends Authenticatable
         'two_factor_recovery_codes',
         'remember_token',
     ];
+
+    /**
+     * Get the position associated with the user.
+     */
+    public function position()
+    {
+        return $this->belongsTo(Position::class);
+    }
 
     /**
      * Get the attributes that should be cast.
