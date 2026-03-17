@@ -4,7 +4,7 @@ use App\Models\User;
 use App\Models\Office;
 
 it('can create an office', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => 'Admin']);
 
     $this->actingAs($user)
         ->post('/offices', [

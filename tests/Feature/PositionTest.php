@@ -4,7 +4,7 @@ use App\Models\User;
 use App\Models\Position;
 
 it('can create a position', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => 'Admin']);
 
     $this->actingAs($user)
         ->post('/positions', [
@@ -18,7 +18,7 @@ it('can create a position', function () {
 });
 
 it('can update a position', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => 'Admin']);
     $position = Position::factory()->create(['name' => 'Junior Developer']);
 
     $this->actingAs($user)
@@ -34,7 +34,7 @@ it('can update a position', function () {
 });
 
 it('can delete a position', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => 'Admin']);
     $position = Position::factory()->create();
 
     $this->actingAs($user)
