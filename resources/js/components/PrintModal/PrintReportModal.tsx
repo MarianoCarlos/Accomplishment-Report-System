@@ -93,26 +93,6 @@ export default function PrintReportModal({
     // Validation errors state
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // Sync form state when report changes
-    useEffect(() => {
-        if (report) {
-            setSelectedOffice(report.office ?? '');
-            // Always use user's assigned position, not the report's position
-            setSelectedPosition((userPositionName || report?.position) ?? '');
-            setSelectedReviewer(report.reviewer ?? '');
-            setSelectedApprover(report.approver ?? '');
-            // Keep search and dropdown closed when modal opens
-            setReviewerSearch('');
-            setApproverSearch('');
-            setOfficeSearch('');
-            setShowReviewerDropdown(false);
-            setShowApproverDropdown(false);
-            setShowOfficeDropdown(false);
-            // Clear previous errors
-            setErrors({});
-        }
-    }, [report, isOpen, userPositionName]);
-
     // Handle click outside for dropdowns
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

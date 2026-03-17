@@ -381,7 +381,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                 )}
 
                 <PrintReportModal
-                    key={expandedReport?.id ?? 'none'}
+                    key={`${expandedReport?.id ?? 'none'}-${isPrintModalOpen}`}
                     isOpen={isPrintModalOpen}
                     onClose={() => setIsPrintModalOpen(false)}
                     report={expandedReport ?? null}
