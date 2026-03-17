@@ -129,7 +129,6 @@ Located in `database/migrations/`. Key tables:
 **offices** & **positions**
 - `id` (PK)
 - `name` (string, unique)
-- `is_active` (boolean, default: true)
 
 ## Code Conventions & Patterns
 
@@ -149,6 +148,8 @@ Located in `database/migrations/`. Key tables:
 - **Searchable dropdowns pattern**: Use Input + Search icon + absolute positioned dropdown list with click-outside detection via `useRef` + `useEffect`
 - **Display names with related data**: Format "Name, Position" using helper functions (e.g., `getPositionName(positionId)`) rather than embedding logic in JSX
 - **Auto-fill on selection**: When user selects an item with related data (e.g., user with position_id), auto-populate connected fields
+- **Typed route helpers (`@/actions`)**: Controllers actions are accessible as typed URL helpers via `import * as ReportController from '@/actions/App/Http/Controllers/ReportController'` then `ReportController.store().url`, `ReportController.archive(id).url`, etc. Use these instead of hardcoding URL strings
+- **Route helpers (`@/routes`)**: Named route functions like `userDashboard()`, `accomplishmentReport()` from `@/routes` return typed href values for `<Link href={...}>` — always use these for internal navigation
 
 ### Naming
 - Controllers: singular + `Controller` (e.g., `ReportController`, not `ReportsController`)
@@ -164,7 +165,7 @@ Three roles defined in User model:
 - **Supervisor**: Can review reports (role field stored but no built-in UI enforcement yet)
 - **Admin**: Full access to user/office/position management via admin routes
 
-Note: Role enforcement via middleware not yet fully implemented on routes; validate `auth()->user()->role` in controller when restricting features to specific roles.
+Note: Role enforcement is implemented via `role:Employee` and `role:Admin` middleware on route groups. For additional in-controller checks, use `abort_unless(auth()->user()->role === 'Admin', 403)`.
 
 ### Entry-Level Access Control
 - **Never trust URL parameters alone** – Always verify resource ownership at the controller level
@@ -195,8 +196,10 @@ Note: Role enforcement via middleware not yet fully implemented on routes; valid
 - Controllers pass additional data via `Inertia::render('page-name', $data)`; all props are automatically available in React components
 
 ### Route Protection
-- `auth` + `verified` middleware required for most user/report routes
-- Admin routes not yet visible in current routes file (check `Admin/` controller namespace)
+- Employee routes: `['auth', 'verified', 'role:Employee']` middleware group
+- Admin routes: `['auth', 'verified', 'role:Admin']` middleware group
+- Role middleware is fully enforced on all routes — check `routes/web.php` for the complete list
+- `dashboard` route redirects based on `auth()->user()->role`
 
 ### Editor & Rich Text
 - Tiptap library integrated (`@tiptap/react`, `@tiptap/starter-kit`)

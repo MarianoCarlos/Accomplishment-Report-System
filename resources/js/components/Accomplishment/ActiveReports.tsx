@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ChevronDown, ChevronUp, Archive, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Archive, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import * as ReportController from '@/actions/App/Http/Controllers/ReportController';
@@ -274,16 +274,29 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                             {completed}/{total} days completed
                                         </span>
 
-                                        <button
-                                            disabled={isDisabled}
-                                            onClick={() =>
-                                                archiveReport(report.id)
-                                            }
-                                            className="text-destructive transition hover:opacity-80 disabled:pointer-events-none"
-                                            title="Archive"
-                                        >
-                                            <Archive className="h-4 w-4" />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                disabled={isDisabled}
+                                                onClick={() =>
+                                                    deleteReport(report.id)
+                                                }
+                                                className="text-destructive transition hover:opacity-80 disabled:pointer-events-none"
+                                                title="Delete"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+
+                                            <button
+                                                disabled={isDisabled}
+                                                onClick={() =>
+                                                    archiveReport(report.id)
+                                                }
+                                                className="text-muted-foreground transition hover:opacity-80 disabled:pointer-events-none"
+                                                title="Archive"
+                                            >
+                                                <Archive className="h-4 w-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </Card>
                             );
@@ -350,17 +363,10 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                         {/* Footer actions */}
                         <div className="mt-6 flex justify-end gap-2 print:hidden">
                             <Button
-                                variant="destructive"
-                                onClick={() => setExpandedId(null)}
-                            >
-                                Cancel
-                            </Button>
-
-                            <Button
                                 variant="success"
                                 onClick={() => setExpandedId(null)}
                             >
-                                Done
+                                Save as Draft
                             </Button>
 
                             <Button
@@ -369,13 +375,6 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                 }}
                             >
                                 Print
-                            </Button>
-
-                            <Button
-                                variant="destructive"
-                                onClick={() => deleteReport(expandedReport.id)}
-                            >
-                                Delete
                             </Button>
                         </div>
                     </Card>
