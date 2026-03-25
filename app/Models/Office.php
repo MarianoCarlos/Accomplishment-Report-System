@@ -8,5 +8,16 @@ class Office extends Model
 {
     protected $fillable = [
         'name',
+        'supervisor_id',
     ];
+
+    public function supervisor()
+    {
+        return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function members()
+    {
+        return $this->hasMany(User::class);
+    }
 }

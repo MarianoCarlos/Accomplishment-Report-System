@@ -4,6 +4,11 @@ import PositionTab from '@/components/admin/PositionTab';
 import UserTab from '@/components/admin/UserTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
+import { adminDashboard } from '@/routes';
+import { officeManagement } from '@/routes/admin';
+import { store as storeOffice, update as updateOffice, destroy as destroyOffice } from '@/routes/offices';
+import { store as storePosition, update as updatePosition, destroy as destroyPosition } from '@/routes/positions';
+import { store as storeUser, update as updateUser, destroy as destroyUser } from '@/routes/users';
 import type { BreadcrumbItem } from '@/types';
 
 interface Office {
@@ -22,6 +27,7 @@ interface User {
     email: string;
     role: string;
     position_id?: number;
+    office_id?: number;
 }
 
 interface Props {
@@ -31,8 +37,8 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Office Management', href: '/admin/office-management' },
+    { title: 'Dashboard', href: adminDashboard().url },
+    { title: 'Office Management', href: officeManagement().url },
 ];
 
 export default function OfficeManagement({
@@ -42,41 +48,41 @@ export default function OfficeManagement({
 }: Props) {
     // ===== OFFICE HANDLERS =====
     const handleAddOffice = (office: { name: string }) => {
-        router.post('/offices', { name: office.name });
+        router.post(storeOffice().url, { name: office.name });
     };
 
     const handleEditOffice = (officeId: number, newName: string) => {
-        router.put(`/offices/${officeId}`, { name: newName });
+        router.put(updateOffice(officeId).url, { name: newName });
     };
 
     const handleDeleteOffice = (officeId: number) => {
-        router.delete(`/offices/${officeId}`);
+        router.delete(destroyOffice(officeId).url);
     };
 
     // ===== POSITION HANDLERS =====
     const handleAddPosition = (position: { name: string }) => {
-        router.post('/positions', { name: position.name });
+        router.post(storePosition().url, { name: position.name });
     };
 
     const handleEditPosition = (positionId: number, newName: string) => {
-        router.put(`/positions/${positionId}`, { name: newName });
+        router.put(updatePosition(positionId).url, { name: newName });
     };
 
     const handleDeletePosition = (positionId: number) => {
-        router.delete(`/positions/${positionId}`);
+        router.delete(destroyPosition(positionId).url);
     };
 
     // ===== USER HANDLERS =====
     const handleAddUser = (user: Omit<User, 'id'>) => {
-        router.post('/admin/users', user);
+        router.post(storeUser().url, user);
     };
 
     const handleEditUser = (userId: number, user: Omit<User, 'id'>) => {
-        router.put(`/admin/users/${userId}`, user);
+        router.put(updateUser(userId).url, user);
     };
 
     const handleDeleteUser = (userId: number) => {
-        router.delete(`/admin/users/${userId}`);
+        router.delete(destroyUser(userId).url);
     };
 
     return (
@@ -121,6 +127,7 @@ export default function OfficeManagement({
                         <UserTab
                             users={users}
                             positions={positions}
+                            offices={offices}
                             onAddUser={handleAddUser}
                             onEditUser={handleEditUser}
                             onDeleteUser={handleDeleteUser}

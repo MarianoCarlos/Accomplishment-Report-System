@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'role',
         'position_id',
+        'office_id',
     ];
 
     /**
@@ -44,6 +45,19 @@ class User extends Authenticatable
     public function position()
     {
         return $this->belongsTo(Position::class);
+    }
+
+    /**
+     * Get the office associated with the user.
+     */
+    public function office()
+    {
+        return $this->belongsTo(Office::class);
+    }
+
+    public function reports()
+    {
+        return $this->hasMany(Report::class);
     }
 
     /**

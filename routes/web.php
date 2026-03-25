@@ -5,7 +5,9 @@ use App\Http\Controllers\ReportEntryController;
 use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\Admin\OfficeManagementController;
+use App\Http\Controllers\Admin\SupervisorOfficeController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Supervisor\SupervisorController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -21,6 +23,11 @@ Route::get('dashboard', function () {
     if (auth()->user()->role === 'Admin') {
         return redirect('/admin-dashboard');
     }
+
+    if (auth()->user()->role === 'Supervisor') {
+        return redirect('/supervisor/dashboard');
+    }
+
     return redirect('/user-dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -58,10 +65,25 @@ Route::middleware(['auth', 'verified', 'role:Employee'])->group(function () {
         ->name('report-entries.update');
 });
 
+// Supervisor Routes
+Route::middleware(['auth', 'verified', 'role:Supervisor'])->group(function () {
+    Route::get('/supervisor/dashboard', [SupervisorController::class, 'dashboard'])
+        ->name('supervisor.dashboard');
+
+    Route::get('/supervisor', [SupervisorController::class, 'index'])
+        ->name('supervisor');
+});
+
 // Admin Routes - Protected
 Route::middleware(['auth', 'verified', 'role:Admin'])->group(function () {
     Route::get('/admin/office-management', [OfficeManagementController::class, 'index'])
         ->name('admin.office-management');
+
+    Route::get('/admin/supervisor-offices', [SupervisorOfficeController::class, 'index'])
+        ->name('admin.supervisor-offices');
+
+    Route::patch('/admin/supervisor-offices/{office}/assign', [SupervisorOfficeController::class, 'assign'])
+        ->name('admin.supervisor-offices.assign');
 
     Route::resource('offices', OfficeController::class);
 

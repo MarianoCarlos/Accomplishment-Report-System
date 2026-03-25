@@ -18,6 +18,7 @@ interface User {
     email: string;
     role: string;
     position_id?: number;
+    office_id?: number;
 }
 
 interface Position {
@@ -25,9 +26,15 @@ interface Position {
     name: string;
 }
 
+interface Office {
+    id: number;
+    name: string;
+}
+
 interface UserTabProps {
     users: User[];
     positions: Position[];
+    offices: Office[];
     onAddUser: (user: Omit<User, 'id'>) => void;
     onEditUser: (userId: number, user: Omit<User, 'id'>) => void;
     onDeleteUser: (userId: number) => void;
@@ -36,6 +43,7 @@ interface UserTabProps {
 export default function UserTab({
     users,
     positions,
+    offices,
     onAddUser,
     onEditUser,
     onDeleteUser,
@@ -45,6 +53,7 @@ export default function UserTab({
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('Employee');
     const [position, setPosition] = useState<number | null>(null);
+    const [office, setOffice] = useState<number | null>(null);
     const [search, setSearch] = useState('');
     
     // Current editing user
@@ -53,6 +62,7 @@ export default function UserTab({
     const [editEmail, setEditEmail] = useState('');
     const [editRole, setEditRole] = useState('Employee');
     const [editPosition, setEditPosition] = useState<number | null>(null);
+    const [editOffice, setEditOffice] = useState<number | null>(null);
 
     // Available roles
     const ROLES = ['Employee', 'Admin', 'Supervisor'];
@@ -72,12 +82,14 @@ export default function UserTab({
             email: email.trim(),
             role,
             position_id: position || undefined,
+            office_id: office || undefined,
         });
         
         setName('');
         setEmail('');
         setRole('Employee');
         setPosition(null);
+        setOffice(null);
     };
 
     // Edit user - start editing
@@ -87,6 +99,7 @@ export default function UserTab({
         setEditEmail(user.email);
         setEditRole(user.role);
         setEditPosition(user.position_id || null);
+        setEditOffice(user.office_id || null);
     };
 
     // Save changes to user
@@ -98,6 +111,7 @@ export default function UserTab({
             email: editEmail.trim(),
             role: editRole,
             position_id: editPosition || undefined,
+            office_id: editOffice || undefined,
         });
         
         setCurrentUser(null);
@@ -105,6 +119,7 @@ export default function UserTab({
         setEditEmail('');
         setEditRole('Employee');
         setEditPosition(null);
+        setEditOffice(null);
     };
 
     // Delete user
@@ -116,6 +131,8 @@ export default function UserTab({
         setEditName('');
         setEditEmail('');
         setEditRole('Employee');
+        setEditPosition(null);
+        setEditOffice(null);
     };
 
     // Cancel edit
@@ -125,6 +142,7 @@ export default function UserTab({
         setEditEmail('');
         setEditRole('Employee');
         setEditPosition(null);
+        setEditOffice(null);
     };
 
     return (
@@ -190,6 +208,26 @@ export default function UserTab({
                                     {positions.map((pos) => (
                                         <option key={pos.id} value={pos.id}>
                                             {pos.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Office */}
+                        {offices.length > 0 && (
+                            <div className="space-y-1">
+                                <Label htmlFor="edit-office" className="text-sm">Office</Label>
+                                <select
+                                    id="edit-office"
+                                    value={editOffice || ''}
+                                    onChange={(e) => setEditOffice(e.target.value ? Number(e.target.value) : null)}
+                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
+                                >
+                                    <option value="">-- Select Office --</option>
+                                    {offices.map((off) => (
+                                        <option key={off.id} value={off.id}>
+                                            {off.name}
                                         </option>
                                     ))}
                                 </select>
@@ -288,6 +326,26 @@ export default function UserTab({
                             </div>
                         )}
 
+                        {/* Office */}
+                        {offices.length > 0 && (
+                            <div className="space-y-1">
+                                <Label htmlFor="office" className="text-sm">Office</Label>
+                                <select
+                                    id="office"
+                                    value={office || ''}
+                                    onChange={(e) => setOffice(e.target.value ? Number(e.target.value) : null)}
+                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
+                                >
+                                    <option value="">-- Select Office --</option>
+                                    {offices.map((off) => (
+                                        <option key={off.id} value={off.id}>
+                                            {off.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         {/* Submit button */}
                         <Button 
                             onClick={handleAdd}
@@ -324,13 +382,14 @@ export default function UserTab({
                             <TableHead className="h-10 font-semibold text-gray-700">Email</TableHead>
                             <TableHead className="h-10 font-semibold text-gray-700">Role</TableHead>
                             <TableHead className="h-10 font-semibold text-gray-700">Position</TableHead>
+                            <TableHead className="h-10 font-semibold text-gray-700">Office</TableHead>
                             <TableHead className="h-10 w-32 text-right font-semibold text-gray-700">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filtered.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                                     <div className="flex flex-col items-center gap-2">
                                         <Search className="h-5 w-5 text-gray-400" />
                                         <p>No users found</p>
@@ -361,6 +420,9 @@ export default function UserTab({
                                     </TableCell>
                                     <TableCell className="h-10 text-gray-600 text-xs">
                                         {user.position_id ? positions.find(p => p.id === user.position_id)?.name : '—'}
+                                    </TableCell>
+                                    <TableCell className="h-10 text-gray-600 text-xs">
+                                        {user.office_id ? offices.find((o) => o.id === user.office_id)?.name : ''}
                                     </TableCell>
                                     <TableCell className="h-10 text-right">
                                         <Button 

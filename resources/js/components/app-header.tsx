@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Menu, Building2 } from 'lucide-react';
+import { LayoutGrid, Menu, Building2, Users, FileText } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,9 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
-import { userDashboard, accomplishmentReport } from '@/routes';
+import { userDashboard, accomplishmentReport, adminDashboard, supervisor as supervisorPage } from '@/routes';
+import { officeManagement, supervisorOffices } from '@/routes/admin';
+import { dashboard as supervisorDashboard } from '@/routes/supervisor';
 import type { BreadcrumbItem, NavItem, SharedData } from '@/types';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
@@ -50,13 +52,31 @@ const userNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: '/admin-dashboard',
+        href: adminDashboard(),
         icon: LayoutGrid,
     },
     {
         title: 'Office Management',
-        href: '/admin/office-management',
+        href: officeManagement(),
         icon: Building2,
+    },
+    {
+        title: 'Supervisor Offices',
+        href: supervisorOffices(),
+        icon: Users,
+    },
+];
+
+const supervisorNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: supervisorDashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Supervisor',
+        href: supervisorPage(),
+        icon: FileText,
     },
 ];
 
@@ -69,14 +89,24 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const getInitials = useInitials();
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
     
-    // Select navigation items based on user role
-    const navItems = auth.user.role === 'Admin' ? adminNavItems : userNavItems;
+    const navItems = auth.user.role === 'Admin'
+        ? adminNavItems
+        : auth.user.role === 'Supervisor'
+            ? supervisorNavItems
+            : userNavItems;
+
+    const homeHref = auth.user.role === 'Admin'
+        ? adminDashboard()
+        : auth.user.role === 'Supervisor'
+            ? supervisorDashboard()
+            : userDashboard();
+
     return (
         <>
             <div className="w-full bg-[#003468] dark:bg-blue-950 border-b border-blue-900 dark:border-blue-800">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     <Link
-                        href={userDashboard()}
+                        href={homeHref}
                         prefetch
                         className="flex items-center space-x-2"
                     >

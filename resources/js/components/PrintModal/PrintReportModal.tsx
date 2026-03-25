@@ -35,6 +35,7 @@ type PageProps = {
     auth: {
         user: {
             name: string;
+            office_id?: number;
             position_id?: number;
         };
     };
@@ -66,12 +67,16 @@ export default function PrintReportModal({
 }: Props) {
     const { auth } = usePage<PageProps>().props;
     const userName = auth.user.name;
+    const userOfficeId = auth.user.office_id;
     const userPositionId = auth.user.position_id;
+    const autoAssignedOfficeName = userOfficeId
+        ? offices.find((office) => office.id === userOfficeId)?.name ?? ''
+        : '';
     const userPositionName = userPositionId
         ? positions.find(p => p.id === userPositionId)?.name ?? ''
         : '';
 
-    const [selectedOffice, setSelectedOffice] = useState(report?.office ?? '');
+    const [selectedOffice, setSelectedOffice] = useState(autoAssignedOfficeName);
     const [selectedPosition, setSelectedPosition] = useState((userPositionName || report?.position) ?? '');
     const [selectedReviewer, setSelectedReviewer] = useState(report?.reviewer ?? '');
     const [selectedApprover, setSelectedApprover] = useState(report?.approver ?? '');
@@ -84,11 +89,6 @@ export default function PrintReportModal({
 
     const reviewerRef = useRef<HTMLDivElement>(null);
     const approverRef = useRef<HTMLDivElement>(null);
-    const officeRef = useRef<HTMLDivElement>(null);
-
-    // Office search state
-    const [officeSearch, setOfficeSearch] = useState('');
-    const [showOfficeDropdown, setShowOfficeDropdown] = useState(false);
 
     // Validation errors state
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -102,29 +102,21 @@ export default function PrintReportModal({
             if (approverRef.current && !approverRef.current.contains(event.target as Node)) {
                 setShowApproverDropdown(false);
             }
-            if (officeRef.current && !officeRef.current.contains(event.target as Node)) {
-                setShowOfficeDropdown(false);
-            }
         };
 
-        if (showReviewerDropdown || showApproverDropdown || showOfficeDropdown) {
+        if (showReviewerDropdown || showApproverDropdown) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => {
                 document.removeEventListener('mousedown', handleClickOutside);
             };
         }
-    }, [showReviewerDropdown, showApproverDropdown, showOfficeDropdown]);
+    }, [showReviewerDropdown, showApproverDropdown]);
 
     // Helper function to get position name
     const getPositionName = (positionId?: number) => {
         if (!positionId) return '';
         return positions.find(p => p.id === positionId)?.name ?? '';
     };
-
-    // Filter offices based on search
-    const filteredOffices = offices.filter(office =>
-        office.name.toLowerCase().includes(officeSearch.toLowerCase())
-    );
 
     // Filter users based on search
     const filteredReviewers = users.filter(user =>
@@ -146,19 +138,16 @@ export default function PrintReportModal({
     const approverName = approverUser
         ? `${approverUser.name}${approverUser.position_id ? `, ${getPositionName(approverUser.position_id)}` : ''}`
         : '';
-    const officeName = offices.find(o => o.name === selectedOffice)?.name || '';
 
     const resetFields = () => {
-        setSelectedOffice('');
-        setSelectedPosition('');
+        setSelectedOffice(autoAssignedOfficeName);
+        setSelectedPosition((userPositionName || report?.position) ?? '');
         setSelectedReviewer('');
         setSelectedApprover('');
         setReviewerSearch('');
         setApproverSearch('');
-        setOfficeSearch('');
         setShowReviewerDropdown(false);
         setShowApproverDropdown(false);
-        setShowOfficeDropdown(false);
     };
 
     const handleClose = () => {
@@ -206,7 +195,7 @@ export default function PrintReportModal({
                         <DialogTitle>Print Accomplishment Report</DialogTitle>
                     </div>
                     <DialogDescription>
-                        Select office, position, and approvers before printing.
+                        Select position and approvers before printing.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -221,76 +210,22 @@ export default function PrintReportModal({
                         />
                     </div>
 
-                    {/* Office - Searchable Select */}
-                    {offices.length > 0 && (
-                        <div className="space-y-2">
-                            <Label htmlFor="office">Office</Label>
-                            <div className="relative" ref={officeRef}>
-                                <div className="relative">
-                                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                    <Input
-                                        id="office"
-                                        placeholder="Search office..."
-                                        value={showOfficeDropdown ? officeSearch : officeName}
-                                        onChange={(e) => {
-                                            setOfficeSearch(e.target.value);
-                                            setShowOfficeDropdown(true);
-                                            if (e.target.value) {
-                                                setErrors(prev => {
-                                                    const newErrors = { ...prev };
-                                                    delete newErrors.office;
-                                                    return newErrors;
-                                                });
-                                            }
-                                        }}
-                                        onFocus={() => setShowOfficeDropdown(true)}
-                                        className={`pl-8 h-9 ${
-                                            errors.office ? 'border-red-500' : ''
-                                        }`}
-                                    />
-                                    {selectedOffice && (
-                                        <button
-                                            onClick={() => {
-                                                setSelectedOffice('');
-                                                setOfficeSearch('');
-                                            }}
-                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Office Dropdown List */}
-                                {showOfficeDropdown && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
-                                        {filteredOffices.length > 0 ? (
-                                            filteredOffices.map((office) => (
-                                                <button
-                                                    key={office.id}
-                                                    onClick={() => {
-                                                        setSelectedOffice(office.name);
-                                                        setOfficeSearch('');
-                                                        setShowOfficeDropdown(false);
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
-                                                >
-                                                    <div className="font-medium">{office.name}</div>
-                                                </button>
-                                            ))
-                                        ) : (
-                                            <div className="px-3 py-2 text-sm text-gray-500">
-                                                No offices found
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            {errors.office && (
-                                <p className="text-xs text-red-500 mt-1">{errors.office}</p>
-                            )}
-                        </div>
-                    )}
+                    {/* Office - Read Only (Auto-filled from assigned office) */}
+                    <div className="space-y-2">
+                        <Label htmlFor="office">Office</Label>
+                        <Input
+                            id="office"
+                            value={selectedOffice}
+                            disabled
+                            className="bg-muted/40 cursor-not-allowed"
+                        />
+                        {!selectedOffice && (
+                            <p className="text-xs text-amber-600">No office assigned. Please contact admin.</p>
+                        )}
+                        {errors.office && (
+                            <p className="text-xs text-red-500 mt-1">{errors.office}</p>
+                        )}
+                    </div>
 
                     {/* Position - Read Only (Auto-filled from assigned position) */}
                     {positions.length > 0 && (

@@ -101,6 +101,10 @@ class FortifyServiceProvider extends ServiceProvider
             if ($user->role === 'Admin') {
                 return '/admin-dashboard';
             }
+
+            if ($user->role === 'Supervisor') {
+                return '/supervisor/dashboard';
+            }
             
             return '/user-dashboard';
         });
