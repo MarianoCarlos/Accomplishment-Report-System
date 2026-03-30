@@ -1,9 +1,11 @@
 import { Edit2, Search } from 'lucide-react';
 import { useState } from 'react';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { PaginatedData } from '@/types';
 
 interface Position {
     id: number;
@@ -11,7 +13,9 @@ interface Position {
 }
 
 interface PositionTabProps {
-    positions: Position[];
+    positions: PaginatedData<Position>;
+    paginationRoute: string;
+    paginationQuery?: Record<string, string | number | null | undefined>;
     onAddPosition: (position: Position) => void;
     onEditPosition: (positionId: number, newName: string) => void;
     onDeletePosition: (positionId: number) => void;
@@ -19,6 +23,8 @@ interface PositionTabProps {
 
 export default function PositionTab({
     positions,
+    paginationRoute,
+    paginationQuery,
     onAddPosition,
     onEditPosition,
     onDeletePosition,
@@ -32,7 +38,7 @@ export default function PositionTab({
     const [editName, setEditName] = useState('');
 
     // Filter positions by search
-    const filtered = positions.filter(position =>
+    const filtered = positions.data.filter(position =>
         position.name.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -203,7 +209,13 @@ export default function PositionTab({
                     </TableBody>
                 </Table>
             </div>
-            <p className="text-xs text-gray-500">Showing {filtered.length} of {positions.length} positions</p>
+            <AdminPagination
+                paginated={positions}
+                route={paginationRoute}
+                pageParam="position_page"
+                itemLabel="positions"
+                query={paginationQuery}
+            />
         </div>
     );
 }

@@ -54,14 +54,20 @@ class SupervisorController extends Controller
                 'id' => $office->id,
                 'name' => $office->name,
                 'members' => $office->members->map(function ($member) {
-                    $entries = $member->reports
-                        ->flatMap(fn ($report) => $report->entries)
-                        ->map(fn ($entry) => [
-                            'id' => $entry->id,
-                            'date' => $entry->entry_date?->toDateString(),
-                            'content' => $entry->content,
+                    $reports = $member->reports
+                        ->map(fn ($report) => [
+                            'id' => $report->id,
+                            'startDate' => $report->start_date?->toDateString(),
+                            'endDate' => $report->end_date?->toDateString(),
+                            'entries' => $report->entries
+                                ->map(fn ($entry) => [
+                                    'id' => $entry->id,
+                                    'date' => $entry->entry_date?->toDateString(),
+                                    'content' => $entry->content,
+                                ])
+                                ->sortByDesc('date')
+                                ->values(),
                         ])
-                        ->sortBy('date')
                         ->values();
 
                     return [
@@ -69,7 +75,7 @@ class SupervisorController extends Controller
                         'name' => $member->name,
                         'email' => $member->email,
                         'position' => $member->position?->name ?? 'Unassigned',
-                        'entries' => $entries,
+                        'reports' => $reports,
                     ];
                 })->values(),
             ])->values(),
@@ -87,11 +93,12 @@ class SupervisorController extends Controller
                     ->with([
                         'position:id,name',
                         'reports' => fn ($reportQuery) => $reportQuery
-                            ->select(['id', 'user_id'])
+                            ->select(['id', 'user_id', 'start_date', 'end_date'])
+                            ->orderByDesc('start_date')
                             ->with([
                                 'entries' => fn ($entryQuery) => $entryQuery
                                     ->select(['id', 'report_id', 'entry_date', 'content'])
-                                    ->orderBy('entry_date'),
+                                ->orderByDesc('entry_date'),
                             ]),
                     ]),
             ])

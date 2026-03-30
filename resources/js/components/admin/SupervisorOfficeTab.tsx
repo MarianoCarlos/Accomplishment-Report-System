@@ -1,11 +1,13 @@
 import { Search, UserCheck } from 'lucide-react';
 import { Fragment } from 'react';
 import { useState } from 'react';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { PaginatedData } from '@/types';
 
 interface Office {
     id: number;
@@ -19,7 +21,9 @@ interface Supervisor {
 }
 
 interface SupervisorOfficeTabProps {
-    offices: Office[];
+    offices: PaginatedData<Office>;
+    paginationRoute: string;
+    paginationQuery?: Record<string, string | number | null | undefined>;
     supervisors: Supervisor[];
     assignments: Record<number, number | null>;
     onAssign: (officeId: number, supervisorId: number | null) => void;
@@ -27,6 +31,8 @@ interface SupervisorOfficeTabProps {
 
 export default function SupervisorOfficeTab({
     offices,
+    paginationRoute,
+    paginationQuery,
     supervisors,
     assignments,
     onAssign,
@@ -35,7 +41,7 @@ export default function SupervisorOfficeTab({
     const [selectedOfficeId, setSelectedOfficeId] = useState<number | null>(null);
     const [pendingSupervisorId, setPendingSupervisorId] = useState<number | null>(null);
 
-    const filtered = offices.filter((o) =>
+    const filtered = offices.data.filter((o) =>
         o.name.toLowerCase().includes(search.toLowerCase()),
     );
 
@@ -205,9 +211,13 @@ export default function SupervisorOfficeTab({
                     </TableBody>
                 </Table>
             </div>
-            <p className="text-xs text-gray-500">
-                Showing {filtered.length} of {offices.length} offices
-            </p>
+            <AdminPagination
+                paginated={offices}
+                route={paginationRoute}
+                pageParam="supervisor_office_page"
+                itemLabel="offices"
+                query={paginationQuery}
+            />
         </div>
     );
 }

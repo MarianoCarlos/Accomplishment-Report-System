@@ -1,10 +1,12 @@
 import { Edit2, Search } from 'lucide-react';
 import { useState } from 'react';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { PaginatedData } from '@/types';
 
 declare module '@/components/ui/button' {
     interface ButtonProps {
@@ -32,7 +34,9 @@ interface Office {
 }
 
 interface UserTabProps {
-    users: User[];
+    users: PaginatedData<User>;
+    paginationRoute: string;
+    paginationQuery?: Record<string, string | number | null | undefined>;
     positions: Position[];
     offices: Office[];
     onAddUser: (user: Omit<User, 'id'>) => void;
@@ -42,6 +46,8 @@ interface UserTabProps {
 
 export default function UserTab({
     users,
+    paginationRoute,
+    paginationQuery,
     positions,
     offices,
     onAddUser,
@@ -68,7 +74,7 @@ export default function UserTab({
     const ROLES = ['Employee', 'Admin', 'Supervisor'];
 
     // Filter users by search
-    const filtered = users.filter(user =>
+    const filtered = users.data.filter(user =>
         user.name.toLowerCase().includes(search.toLowerCase()) ||
         user.email.toLowerCase().includes(search.toLowerCase())
     );
@@ -441,7 +447,13 @@ export default function UserTab({
                     </TableBody>
                 </Table>
             </div>
-            <p className="text-xs text-gray-500">Showing {filtered.length} of {users.length} users</p>
+            <AdminPagination
+                paginated={users}
+                route={paginationRoute}
+                pageParam="user_page"
+                itemLabel="users"
+                query={paginationQuery}
+            />
         </div>
     );
 }

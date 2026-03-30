@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { adminDashboard } from '@/routes';
 import { supervisorOffices } from '@/routes/admin';
 import { assign } from '@/routes/admin/supervisor-offices';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 interface Office {
     id: number;
@@ -18,7 +18,7 @@ interface Supervisor {
 }
 
 interface Props {
-    offices: Office[];
+    offices: PaginatedData<Office>;
     supervisors: Supervisor[];
     assignments: Record<number, number | null>;
 }
@@ -43,6 +43,7 @@ export default function SupervisorOffices({ offices, supervisors, assignments }:
                 </p>
                 <SupervisorOfficeTab
                     offices={offices}
+                    paginationRoute={supervisorOffices().url}
                     supervisors={supervisors}
                     assignments={assignments}
                     onAssign={handleAssign}

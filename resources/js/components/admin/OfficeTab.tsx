@@ -1,9 +1,11 @@
 import { Edit2, Search } from 'lucide-react';
 import { useState } from 'react';
+import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { PaginatedData } from '@/types';
 
 interface Office {
     id: number;
@@ -11,7 +13,9 @@ interface Office {
 }
 
 interface OfficeTabProps {
-    offices: Office[];
+    offices: PaginatedData<Office>;
+    paginationRoute: string;
+    paginationQuery?: Record<string, string | number | null | undefined>;
     onAddOffice: (office: Office) => void;
     onEditOffice: (officeId: number, newName: string) => void;
     onDeleteOffice: (officeId: number) => void;
@@ -19,6 +23,8 @@ interface OfficeTabProps {
 
 export default function OfficeTab({
     offices,
+    paginationRoute,
+    paginationQuery,
     onAddOffice,
     onEditOffice,
     onDeleteOffice,
@@ -32,7 +38,7 @@ export default function OfficeTab({
     const [editName, setEditName] = useState('');
 
     // Filter offices by search
-    const filtered = offices.filter(office =>
+    const filtered = offices.data.filter(office =>
         office.name.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -203,7 +209,13 @@ export default function OfficeTab({
                     </TableBody>
                 </Table>
             </div>
-            <p className="text-xs text-gray-500">Showing {filtered.length} of {offices.length} offices</p>
+            <AdminPagination
+                paginated={offices}
+                route={paginationRoute}
+                pageParam="office_page"
+                itemLabel="offices"
+                query={paginationQuery}
+            />
         </div>
     );
 }

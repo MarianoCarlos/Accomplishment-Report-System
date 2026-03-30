@@ -2,12 +2,13 @@
 import { Building2, FileText, ListChecks, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import { dashboard as supervisorDashboard } from '@/routes/supervisor';
 import type { BreadcrumbItem, SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
-        href: '/supervisor/dashboard',
+        href: supervisorDashboard().url,
     },
 ];
 

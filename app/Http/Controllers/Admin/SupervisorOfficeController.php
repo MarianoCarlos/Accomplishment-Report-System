@@ -12,12 +12,20 @@ use Inertia\Response;
 
 class SupervisorOfficeController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $perPage = max(5, min(50, (int) $request->integer('per_page', 10)));
+
+        $offices = Office::orderBy('name')
+            ->paginate($perPage, ['id', 'name', 'supervisor_id'], 'supervisor_office_page')
+            ->withQueryString();
+
+        $officeIds = $offices->getCollection()->pluck('id');
+
         return Inertia::render('admin/supervisor-offices', [
-            'offices'     => Office::orderBy('name')->get(['id', 'name', 'supervisor_id']),
+            'offices'     => $offices,
             'supervisors' => User::where('role', 'Supervisor')->orderBy('name')->get(['id', 'name', 'email']),
-            'assignments' => Office::pluck('supervisor_id', 'id'),
+            'assignments' => Office::whereIn('id', $officeIds)->pluck('supervisor_id', 'id'),
         ]);
     }
 

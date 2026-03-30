@@ -9,7 +9,7 @@ import { officeManagement } from '@/routes/admin';
 import { store as storeOffice, update as updateOffice, destroy as destroyOffice } from '@/routes/offices';
 import { store as storePosition, update as updatePosition, destroy as destroyPosition } from '@/routes/positions';
 import { store as storeUser, update as updateUser, destroy as destroyUser } from '@/routes/users';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 interface Office {
     id: number;
@@ -31,9 +31,10 @@ interface User {
 }
 
 interface Props {
-    offices: Office[];
-    positions: Position[];
-    users: User[];
+    offices: PaginatedData<Office>;
+    positions: PaginatedData<Position>;
+    users: PaginatedData<User>;
+    activeTab?: 'office' | 'positions' | 'users';
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -45,7 +46,20 @@ export default function OfficeManagement({
     offices,
     positions,
     users,
+    activeTab = 'office',
 }: Props) {
+    const handleTabChange = (tab: 'office' | 'positions' | 'users') => {
+        router.get(
+            officeManagement().url,
+            { tab },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
+    };
+
     // ===== OFFICE HANDLERS =====
     const handleAddOffice = (office: { name: string }) => {
         router.post(storeOffice().url, { name: office.name });
@@ -91,7 +105,7 @@ export default function OfficeManagement({
             <div className="space-y-4 p-4">
                 <h1 className="text-3xl font-bold">Office Management</h1>
 
-                <Tabs defaultValue="office" className="w-full">
+                <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as 'office' | 'positions' | 'users')} className="w-full">
                     <TabsList>
                         <TabsTrigger value="office">Offices</TabsTrigger>
                         <TabsTrigger value="positions">Positions</TabsTrigger>
@@ -102,6 +116,8 @@ export default function OfficeManagement({
                     <TabsContent value="office">
                         <OfficeTab
                             offices={offices}
+                            paginationRoute={officeManagement().url}
+                            paginationQuery={{ tab: 'office' }}
                             onAddOffice={(office) =>
                                 handleAddOffice({ name: office.name })
                             }
@@ -114,6 +130,8 @@ export default function OfficeManagement({
                     <TabsContent value="positions">
                         <PositionTab
                             positions={positions}
+                            paginationRoute={officeManagement().url}
+                            paginationQuery={{ tab: 'positions' }}
                             onAddPosition={(position) =>
                                 handleAddPosition({ name: position.name })
                             }
@@ -126,8 +144,10 @@ export default function OfficeManagement({
                     <TabsContent value="users">
                         <UserTab
                             users={users}
-                            positions={positions}
-                            offices={offices}
+                            paginationRoute={officeManagement().url}
+                            paginationQuery={{ tab: 'users' }}
+                            positions={positions.data}
+                            offices={offices.data}
                             onAddUser={handleAddUser}
                             onEditUser={handleEditUser}
                             onDeleteUser={handleDeleteUser}
