@@ -1,4 +1,4 @@
-import { Search, UserCheck } from 'lucide-react';
+﻿import { Search, UserCheck } from 'lucide-react';
 import { Fragment } from 'react';
 import { useState } from 'react';
 import AdminPagination from '@/components/admin/AdminPagination';
@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { PaginatedData } from '@/types';
 
@@ -165,25 +166,26 @@ export default function SupervisorOfficeTab({
                                                             </span>
                                                         </Label>
                                                         <div className="flex items-center gap-2">
-                                                            <select
-                                                                id={`sup-select-${office.id}`}
-                                                                value={pendingSupervisorId ?? ''}
-                                                                onChange={(e) =>
+                                                                                                                                                                                    <Select
+                                                                value={pendingSupervisorId?.toString() ?? '__none__'}
+                                                                onValueChange={(val) =>
                                                                     setPendingSupervisorId(
-                                                                        e.target.value
-                                                                            ? Number(e.target.value)
-                                                                            : null,
+                                                                        val === '__none__' ? null : Number(val),
                                                                     )
                                                                 }
-                                                                className="h-8 min-w-56 rounded-md border border-gray-300 px-3 text-sm"
                                                             >
-                                                                <option value="">— None —</option>
-                                                                {supervisors.map((s) => (
-                                                                    <option key={s.id} value={s.id}>
-                                                                        {s.name}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
+                                                                <SelectTrigger className="h-8 w-auto">
+                                                                    <SelectValue placeholder="Select a Supervisor" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="__none__">— None —</SelectItem>
+                                                                    {supervisors.map((s) => (
+                                                                        <SelectItem key={s.id} value={s.id.toString()}>
+                                                                            {s.name}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
                                                             <Button
                                                                 size="sm"
                                                                 className="h-8 text-xs"

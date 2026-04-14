@@ -1,4 +1,4 @@
-import { Edit2, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useState } from 'react';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Button } from '@/components/ui/button';
@@ -193,13 +193,12 @@ export default function OfficeTab({
                                         {office.name}
                                     </TableCell>
                                     <TableCell className="h-10 text-right">
-                                        <Button 
-                                            variant={currentOffice?.id === office.id ? "default" : "ghost"}
-                                            size="sm" 
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 px-3 text-xs"
                                             onClick={() => startEdit(office)}
-                                            className="gap-1"
                                         >
-                                            <Edit2 className="h-4 w-4" />
                                             Edit
                                         </Button>
                                     </TableCell>

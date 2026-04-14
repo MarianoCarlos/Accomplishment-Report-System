@@ -49,7 +49,7 @@ class SupervisorController extends Controller
     {
         $offices = $this->loadAssignedOffices();
 
-        return Inertia::render('supervisor/supervisor', [
+        return Inertia::render('supervisor/team', [
             'assignedOffices' => $offices->map(fn (Office $office) => [
                 'id' => $office->id,
                 'name' => $office->name,

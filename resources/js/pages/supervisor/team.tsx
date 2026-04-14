@@ -13,7 +13,7 @@ import type { BreadcrumbItem, SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: supervisorDashboard().url },
-    { title: 'Supervisor', href: supervisorRoute().url },
+    { title: 'Team', href: supervisorRoute().url },
 ];
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ function buildOpenStates(groups: YearGroup[]) {
     };
 }
 
-export default function Supervisor({ assignedOffices }: SupervisorPageProps) {
+export default function Team({ assignedOffices }: SupervisorPageProps) {
     const [selectedOffice, setSelectedOffice] = useState<AssignedOffice | null>(null);
     const [selectedMember, setSelectedMember] = useState<OfficeMember | null>(null);
     const [openYears, setOpenYears] = useState<Record<string, boolean>>({});
@@ -338,14 +338,14 @@ export default function Supervisor({ assignedOffices }: SupervisorPageProps) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Supervisor" />
+            <Head title="Team" />
             <div className="flex flex-1 flex-col gap-4 p-4">
 
                 {/* ── View 1: Office cards ── */}
                 {selectedOffice === null && (
                     <>
                         <div>
-                            <h1 className="text-2xl font-semibold tracking-tight">Supervisor Panel</h1>
+                            <h1 className="text-2xl font-semibold tracking-tight">Assigned Offices</h1>
                             <p className="text-sm text-muted-foreground">
                                 Select an office to view its members.
                             </p>

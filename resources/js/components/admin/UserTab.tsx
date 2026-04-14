@@ -1,10 +1,11 @@
-import { Edit2, Search } from 'lucide-react';
-import { useState } from 'react';
+import { Search, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { PaginatedData } from '@/types';
 
@@ -73,6 +74,50 @@ export default function UserTab({
     // Available roles
     const ROLES = ['Employee', 'Admin', 'Supervisor'];
 
+    // Add-form search/dropdown states
+    const [positionSearch, setPositionSearch] = useState('');
+    const [officeSearch, setOfficeSearch] = useState('');
+    const [showPositionDropdown, setShowPositionDropdown] = useState(false);
+    const [showOfficeDropdown, setShowOfficeDropdown] = useState(false);
+
+    // Edit-form search/dropdown states
+    const [editPositionSearch, setEditPositionSearch] = useState('');
+    const [editOfficeSearch, setEditOfficeSearch] = useState('');
+    const [showEditPositionDropdown, setShowEditPositionDropdown] = useState(false);
+    const [showEditOfficeDropdown, setShowEditOfficeDropdown] = useState(false);
+
+    // Refs for click-outside detection
+    const positionRef = useRef<HTMLDivElement>(null);
+    const officeRef = useRef<HTMLDivElement>(null);
+    const editPositionRef = useRef<HTMLDivElement>(null);
+    const editOfficeRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdowns on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (positionRef.current && !positionRef.current.contains(event.target as Node)) {
+                setShowPositionDropdown(false);
+            }
+            if (officeRef.current && !officeRef.current.contains(event.target as Node)) {
+                setShowOfficeDropdown(false);
+            }
+            if (editPositionRef.current && !editPositionRef.current.contains(event.target as Node)) {
+                setShowEditPositionDropdown(false);
+            }
+            if (editOfficeRef.current && !editOfficeRef.current.contains(event.target as Node)) {
+                setShowEditOfficeDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Filtered lists for search-select
+    const filteredPositions = positions.filter(p => p.name.toLowerCase().includes(positionSearch.toLowerCase()));
+    const filteredOffices = offices.filter(o => o.name.toLowerCase().includes(officeSearch.toLowerCase()));
+    const filteredEditPositions = positions.filter(p => p.name.toLowerCase().includes(editPositionSearch.toLowerCase()));
+    const filteredEditOffices = offices.filter(o => o.name.toLowerCase().includes(editOfficeSearch.toLowerCase()));
+
     // Filter users by search
     const filtered = users.data.filter(user =>
         user.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -96,6 +141,10 @@ export default function UserTab({
         setRole('Employee');
         setPosition(null);
         setOffice(null);
+        setPositionSearch('');
+        setOfficeSearch('');
+        setShowPositionDropdown(false);
+        setShowOfficeDropdown(false);
     };
 
     // Edit user - start editing
@@ -126,6 +175,10 @@ export default function UserTab({
         setEditRole('Employee');
         setEditPosition(null);
         setEditOffice(null);
+        setEditPositionSearch('');
+        setEditOfficeSearch('');
+        setShowEditPositionDropdown(false);
+        setShowEditOfficeDropdown(false);
     };
 
     // Delete user
@@ -139,6 +192,10 @@ export default function UserTab({
         setEditRole('Employee');
         setEditPosition(null);
         setEditOffice(null);
+        setEditPositionSearch('');
+        setEditOfficeSearch('');
+        setShowEditPositionDropdown(false);
+        setShowEditOfficeDropdown(false);
     };
 
     // Cancel edit
@@ -149,6 +206,10 @@ export default function UserTab({
         setEditRole('Employee');
         setEditPosition(null);
         setEditOffice(null);
+        setEditPositionSearch('');
+        setEditOfficeSearch('');
+        setShowEditPositionDropdown(false);
+        setShowEditOfficeDropdown(false);
     };
 
     return (
@@ -183,62 +244,112 @@ export default function UserTab({
                             </div>
                         </div>
 
-                        {/* Role */}
-                        <div className="space-y-1">
-                            <Label htmlFor="edit-role" className="text-sm">Role</Label>
-                            <select
-                                id="edit-role"
-                                value={editRole}
-                                onChange={(e) => setEditRole(e.target.value)}
-                                className="h-8 px-3 border border-gray-300 rounded-md text-sm"
-                            >
-                                {ROLES.map((r) => (
-                                    <option key={r} value={r}>
-                                        {r}
-                                    </option>
-                                ))}
-                            </select>
+                        {/* Role, Position, Office side by side */}
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                                <Label className="text-sm">Role</Label>
+                                <Select value={editRole} onValueChange={(val) => setEditRole(val)}>
+                                    <SelectTrigger className="h-8 w-full">
+                                        <SelectValue placeholder="Select Role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {ROLES.map((r) => (
+                                            <SelectItem key={r} value={r}>{r}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-sm">Position</Label>
+                                <div className="relative" ref={editPositionRef}>
+                                    <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <Input
+                                        placeholder="Select Position"
+                                        value={showEditPositionDropdown ? editPositionSearch : (positions.find(p => p.id === editPosition)?.name ?? '')}
+                                        onChange={(e) => {
+                                            setEditPositionSearch(e.target.value);
+                                            setShowEditPositionDropdown(true);
+                                        }}
+                                        onFocus={() => setShowEditPositionDropdown(true)}
+                                        className="h-8 pl-6 pr-6 text-sm"
+                                    />
+                                    {editPosition !== null && (
+                                        <button
+                                            onClick={() => { setEditPosition(null); setEditPositionSearch(''); }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                    {showEditPositionDropdown && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
+                                            {filteredEditPositions.length > 0 ? (
+                                                filteredEditPositions.map((pos) => (
+                                                    <button
+                                                        key={pos.id}
+                                                        onClick={() => {
+                                                            setEditPosition(pos.id);
+                                                            setEditPositionSearch('');
+                                                            setShowEditPositionDropdown(false);
+                                                        }}
+                                                        className="w-full text-left px-3 py-1.5 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                                                    >
+                                                        {pos.name}
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="px-3 py-1.5 text-sm text-gray-500">No results.</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-sm">Office</Label>
+                                <div className="relative" ref={editOfficeRef}>
+                                    <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <Input
+                                        placeholder="Select Office"
+                                        value={showEditOfficeDropdown ? editOfficeSearch : (offices.find(o => o.id === editOffice)?.name ?? '')}
+                                        onChange={(e) => {
+                                            setEditOfficeSearch(e.target.value);
+                                            setShowEditOfficeDropdown(true);
+                                        }}
+                                        onFocus={() => setShowEditOfficeDropdown(true)}
+                                        className="h-8 pl-6 pr-6 text-sm"
+                                    />
+                                    {editOffice !== null && (
+                                        <button
+                                            onClick={() => { setEditOffice(null); setEditOfficeSearch(''); }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                    {showEditOfficeDropdown && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
+                                            {filteredEditOffices.length > 0 ? (
+                                                filteredEditOffices.map((off) => (
+                                                    <button
+                                                        key={off.id}
+                                                        onClick={() => {
+                                                            setEditOffice(off.id);
+                                                            setEditOfficeSearch('');
+                                                            setShowEditOfficeDropdown(false);
+                                                        }}
+                                                        className="w-full text-left px-3 py-1.5 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                                                    >
+                                                        {off.name}
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="px-3 py-1.5 text-sm text-gray-500">No results.</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-
-                        {/* Position */}
-                        {positions.length > 0 && (
-                            <div className="space-y-1">
-                                <Label htmlFor="edit-position" className="text-sm">Position</Label>
-                                <select
-                                    id="edit-position"
-                                    value={editPosition || ''}
-                                    onChange={(e) => setEditPosition(e.target.value ? Number(e.target.value) : null)}
-                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
-                                >
-                                    <option value="">-- Select Position --</option>
-                                    {positions.map((pos) => (
-                                        <option key={pos.id} value={pos.id}>
-                                            {pos.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        {/* Office */}
-                        {offices.length > 0 && (
-                            <div className="space-y-1">
-                                <Label htmlFor="edit-office" className="text-sm">Office</Label>
-                                <select
-                                    id="edit-office"
-                                    value={editOffice || ''}
-                                    onChange={(e) => setEditOffice(e.target.value ? Number(e.target.value) : null)}
-                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
-                                >
-                                    <option value="">-- Select Office --</option>
-                                    {offices.map((off) => (
-                                        <option key={off.id} value={off.id}>
-                                            {off.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
 
                         {/* Action buttons */}
                         <div className="flex gap-2 pt-1">
@@ -295,62 +406,112 @@ export default function UserTab({
                             </div>
                         </div>
 
-                        {/* Role */}
-                        <div className="space-y-1">
-                            <Label htmlFor="role" className="text-sm">Role</Label>
-                            <select
-                                id="role"
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                className="h-8 px-3 border border-gray-300 rounded-md text-sm"
-                            >
-                                {ROLES.map((r) => (
-                                    <option key={r} value={r}>
-                                        {r}
-                                    </option>
-                                ))}
-                            </select>
+                        {/* Role, Position, Office side by side */}
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                                <Label className="text-sm">Role</Label>
+                                <Select value={role} onValueChange={(val) => setRole(val)}>
+                                    <SelectTrigger className="h-8 w-full">
+                                        <SelectValue placeholder="Select Role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {ROLES.map((r) => (
+                                            <SelectItem key={r} value={r}>{r}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-sm">Position</Label>
+                                <div className="relative" ref={positionRef}>
+                                    <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <Input
+                                        placeholder="Select Position"
+                                        value={showPositionDropdown ? positionSearch : (positions.find(p => p.id === position)?.name ?? '')}
+                                        onChange={(e) => {
+                                            setPositionSearch(e.target.value);
+                                            setShowPositionDropdown(true);
+                                        }}
+                                        onFocus={() => setShowPositionDropdown(true)}
+                                        className="h-8 pl-6 pr-6 text-sm"
+                                    />
+                                    {position !== null && (
+                                        <button
+                                            onClick={() => { setPosition(null); setPositionSearch(''); }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                    {showPositionDropdown && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
+                                            {filteredPositions.length > 0 ? (
+                                                filteredPositions.map((pos) => (
+                                                    <button
+                                                        key={pos.id}
+                                                        onClick={() => {
+                                                            setPosition(pos.id);
+                                                            setPositionSearch('');
+                                                            setShowPositionDropdown(false);
+                                                        }}
+                                                        className="w-full text-left px-3 py-1.5 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                                                    >
+                                                        {pos.name}
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="px-3 py-1.5 text-sm text-gray-500">No results.</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-sm">Office</Label>
+                                <div className="relative" ref={officeRef}>
+                                    <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <Input
+                                        placeholder="Select Office"
+                                        value={showOfficeDropdown ? officeSearch : (offices.find(o => o.id === office)?.name ?? '')}
+                                        onChange={(e) => {
+                                            setOfficeSearch(e.target.value);
+                                            setShowOfficeDropdown(true);
+                                        }}
+                                        onFocus={() => setShowOfficeDropdown(true)}
+                                        className="h-8 pl-6 pr-6 text-sm"
+                                    />
+                                    {office !== null && (
+                                        <button
+                                            onClick={() => { setOffice(null); setOfficeSearch(''); }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                    {showOfficeDropdown && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
+                                            {filteredOffices.length > 0 ? (
+                                                filteredOffices.map((off) => (
+                                                    <button
+                                                        key={off.id}
+                                                        onClick={() => {
+                                                            setOffice(off.id);
+                                                            setOfficeSearch('');
+                                                            setShowOfficeDropdown(false);
+                                                        }}
+                                                        className="w-full text-left px-3 py-1.5 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                                                    >
+                                                        {off.name}
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="px-3 py-1.5 text-sm text-gray-500">No results.</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-
-                        {/* Position */}
-                        {positions.length > 0 && (
-                            <div className="space-y-1">
-                                <Label htmlFor="position" className="text-sm">Position</Label>
-                                <select
-                                    id="position"
-                                    value={position || ''}
-                                    onChange={(e) => setPosition(e.target.value ? Number(e.target.value) : null)}
-                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
-                                >
-                                    <option value="">-- Select Position --</option>
-                                    {positions.map((pos) => (
-                                        <option key={pos.id} value={pos.id}>
-                                            {pos.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        {/* Office */}
-                        {offices.length > 0 && (
-                            <div className="space-y-1">
-                                <Label htmlFor="office" className="text-sm">Office</Label>
-                                <select
-                                    id="office"
-                                    value={office || ''}
-                                    onChange={(e) => setOffice(e.target.value ? Number(e.target.value) : null)}
-                                    className="h-8 px-3 border border-gray-300 rounded-md text-sm"
-                                >
-                                    <option value="">-- Select Office --</option>
-                                    {offices.map((off) => (
-                                        <option key={off.id} value={off.id}>
-                                            {off.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
 
                         {/* Submit button */}
                         <Button 
@@ -431,13 +592,12 @@ export default function UserTab({
                                         {user.office_id ? offices.find((o) => o.id === user.office_id)?.name : ''}
                                     </TableCell>
                                     <TableCell className="h-10 text-right">
-                                        <Button 
-                                            variant={currentUser?.id === user.id ? "default" : "ghost"}
-                                            size="sm" 
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 px-3 text-xs"
                                             onClick={() => startEdit(user)}
-                                            className="gap-1"
                                         >
-                                            <Edit2 className="h-4 w-4" />
                                             Edit
                                         </Button>
                                     </TableCell>

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Menu, Building2, Users, FileText } from 'lucide-react';
+import { LayoutGrid, Menu, Building2, Users } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -74,9 +74,9 @@ const supervisorNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Supervisor',
+        title: 'Team',
         href: supervisorPage(),
-        icon: FileText,
+        icon: Users,
     },
 ];
 
