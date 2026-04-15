@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Menu, Building2, Users } from 'lucide-react';
+import { ClipboardList, LayoutGrid, Menu, Building2, Users } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
-import { userDashboard, accomplishmentReport, adminDashboard, supervisor as supervisorPage } from '@/routes';
+import { accomplishmentReport, adminDashboard, supervisor as supervisorPage } from '@/routes';
 import { officeManagement, supervisorOffices } from '@/routes/admin';
 import { dashboard as supervisorDashboard } from '@/routes/supervisor';
 import type { BreadcrumbItem, NavItem, SharedData } from '@/types';
@@ -38,14 +38,9 @@ type Props = {
 
 const userNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
-        href: userDashboard(),
-        icon: LayoutGrid,
-    },
-    {
         title: 'Accomplishment Report',
         href: accomplishmentReport(),
-        icon: LayoutGrid,
+        icon: ClipboardList,
     },
 ];
 
@@ -99,7 +94,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
         ? adminDashboard()
         : auth.user.role === 'Supervisor'
             ? supervisorDashboard()
-            : userDashboard();
+            : accomplishmentReport();
 
     return (
         <>

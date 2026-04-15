@@ -1,6 +1,5 @@
-﻿import { Search, UserCheck } from 'lucide-react';
-import { Fragment } from 'react';
-import { useState } from 'react';
+import { Search, UserCheck } from 'lucide-react';
+import { Fragment, useState } from 'react';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -69,62 +68,52 @@ export default function SupervisorOfficeTab({
     const cancelEdit = () => setSelectedOfficeId(null);
 
     return (
-        <div className="space-y-4">
-            {/* Search */}
-            <div className="space-y-2">
-                <Label htmlFor="office-search" className="text-sm font-medium">
-                    Search Offices
-                </Label>
-                <div className="relative max-w-xs">
-                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <Input
-                        id="office-search"
-                        placeholder="Search by office name..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="h-9 pl-8 text-sm"
-                    />
-                </div>
+        <div className="space-y-5">
+
+            {/* ── Search ─────────────────────────────────────────── */}
+            <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <Input
+                    placeholder="Search offices…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-9 pl-9 text-sm"
+                />
             </div>
 
-
-            {/* Office Table */}
+            {/* ── Table ──────────────────────────────────────────── */}
             <div className="rounded-lg border border-gray-200 overflow-hidden">
                 <Table className="text-sm">
                     <TableHeader className="bg-gray-50">
                         <TableRow className="border-b border-gray-200">
-                            <TableHead className="h-10 font-semibold text-gray-700">Office</TableHead>
-                            <TableHead className="h-10 font-semibold text-gray-700">Assigned Supervisor</TableHead>
-                            <TableHead className="h-10 w-16 text-right font-semibold text-gray-700">Actions</TableHead>
+                            <TableHead className="h-10 pl-4 font-semibold text-gray-600">Office</TableHead>
+                            <TableHead className="h-10 font-semibold text-gray-600">Assigned Supervisor</TableHead>
+                            <TableHead className="h-10 pr-4 w-24 text-right font-semibold text-gray-600">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filtered.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={3} className="py-8 text-center text-gray-500">
+                                <TableCell colSpan={3} className="py-10 text-center text-sm text-gray-400">
                                     <div className="flex flex-col items-center gap-2">
-                                        <Search className="h-5 w-5 text-gray-400" />
-                                        <p>No offices found</p>
+                                        <Search className="h-5 w-5 text-gray-300" />
+                                        <span>No offices found</span>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filtered.map((office, index) => {
+                            filtered.map((office) => {
                                 const supervisor = getSupervisor(office.id);
                                 const isSelected = selectedOfficeId === office.id;
 
                                 return (
                                     <Fragment key={office.id}>
                                         <TableRow
-                                            className={`border-b border-gray-200 transition-colors ${
-                                                isSelected
-                                                    ? 'bg-blue-50'
-                                                    : index % 2 === 0
-                                                      ? 'bg-white'
-                                                      : 'bg-gray-50'
+                                            className={`border-b border-gray-100 ${
+                                                isSelected ? 'bg-blue-50/30' : 'bg-white'
                                             }`}
                                         >
-                                            <TableCell className="h-12 font-medium text-gray-900">
+                                            <TableCell className="h-12 pl-4 font-medium text-gray-900">
                                                 {office.name}
                                             </TableCell>
                                             <TableCell className="h-12">
@@ -139,34 +128,36 @@ export default function SupervisorOfficeTab({
                                                     </span>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="h-12 text-right">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="h-7 px-3 text-xs"
-                                                    onClick={() => toggleOffice(office)}
-                                                >
-                                                    Edit
-                                                </Button>
+                                            <TableCell className="h-12 pr-4 text-right">
+                                                {!isSelected && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-7 px-3 text-xs"
+                                                        onClick={() => toggleOffice(office)}
+                                                    >
+                                                        Assign
+                                                    </Button>
+                                                )}
                                             </TableCell>
                                         </TableRow>
 
                                         {/* Inline assignment editor */}
                                         {isSelected && (
-                                            <TableRow className="bg-blue-50/70 border-b border-blue-100">
-                                                <TableCell colSpan={3} className="px-6 py-3">
-                                                    <div className="space-y-2">
-                                                        <Label
-                                                            htmlFor={`sup-select-${office.id}`}
-                                                            className="text-xs font-medium text-gray-600"
-                                                        >
-                                                            Select supervisor for{' '}
-                                                            <span className="font-semibold text-gray-800">
-                                                                {office.name}
-                                                            </span>
-                                                        </Label>
-                                                        <div className="flex items-center gap-2">
-                                                                                                                                                                                    <Select
+                                            <TableRow className="border-b border-blue-100 bg-blue-50/60">
+                                                <TableCell colSpan={3} className="px-4 py-3">
+                                                    <div className="flex flex-wrap items-end gap-3">
+                                                        <div className="flex-1 space-y-1 min-w-[220px]">
+                                                            <Label
+                                                                htmlFor={`sup-select-${office.id}`}
+                                                                className="text-xs font-medium text-gray-600"
+                                                            >
+                                                                Supervisor for{' '}
+                                                                <span className="font-semibold text-gray-800">
+                                                                    {office.name}
+                                                                </span>
+                                                            </Label>
+                                                            <Select
                                                                 value={pendingSupervisorId?.toString() ?? '__none__'}
                                                                 onValueChange={(val) =>
                                                                     setPendingSupervisorId(
@@ -174,8 +165,11 @@ export default function SupervisorOfficeTab({
                                                                     )
                                                                 }
                                                             >
-                                                                <SelectTrigger className="h-8 w-auto">
-                                                                    <SelectValue placeholder="Select a Supervisor" />
+                                                                <SelectTrigger
+                                                                    id={`sup-select-${office.id}`}
+                                                                    className="h-9 bg-white text-sm"
+                                                                >
+                                                                    <SelectValue placeholder="Select a supervisor" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
                                                                     <SelectItem value="__none__">— None —</SelectItem>
@@ -186,9 +180,11 @@ export default function SupervisorOfficeTab({
                                                                     ))}
                                                                 </SelectContent>
                                                             </Select>
+                                                        </div>
+                                                        <div className="flex gap-2">
                                                             <Button
                                                                 size="sm"
-                                                                className="h-8 text-xs"
+                                                                className="h-9 px-4"
                                                                 onClick={handleSave}
                                                             >
                                                                 Save
@@ -196,7 +192,7 @@ export default function SupervisorOfficeTab({
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="h-8 text-xs"
+                                                                className="h-9 px-4"
                                                                 onClick={cancelEdit}
                                                             >
                                                                 Cancel
@@ -213,6 +209,7 @@ export default function SupervisorOfficeTab({
                     </TableBody>
                 </Table>
             </div>
+
             <AdminPagination
                 paginated={offices}
                 route={paginationRoute}

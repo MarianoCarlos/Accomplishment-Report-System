@@ -52,107 +52,83 @@ export default function OfficeManagement({
         router.get(
             officeManagement().url,
             { tab },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                replace: true,
-            },
+            { preserveScroll: true, preserveState: true, replace: true },
         );
     };
 
-    // ===== OFFICE HANDLERS =====
-    const handleAddOffice = (office: { name: string }) => {
-        router.post(storeOffice().url, { name: office.name });
-    };
+    const handleAddOffice    = (office: { name: string }) => router.post(storeOffice().url, { name: office.name });
+    const handleEditOffice   = (id: number, name: string) => router.put(updateOffice(id).url, { name });
+    const handleDeleteOffice = (id: number)               => router.delete(destroyOffice(id).url);
 
-    const handleEditOffice = (officeId: number, newName: string) => {
-        router.put(updateOffice(officeId).url, { name: newName });
-    };
+    const handleAddPosition    = (p: { name: string }) => router.post(storePosition().url, { name: p.name });
+    const handleEditPosition   = (id: number, name: string) => router.put(updatePosition(id).url, { name });
+    const handleDeletePosition = (id: number)               => router.delete(destroyPosition(id).url);
 
-    const handleDeleteOffice = (officeId: number) => {
-        router.delete(destroyOffice(officeId).url);
-    };
-
-    // ===== POSITION HANDLERS =====
-    const handleAddPosition = (position: { name: string }) => {
-        router.post(storePosition().url, { name: position.name });
-    };
-
-    const handleEditPosition = (positionId: number, newName: string) => {
-        router.put(updatePosition(positionId).url, { name: newName });
-    };
-
-    const handleDeletePosition = (positionId: number) => {
-        router.delete(destroyPosition(positionId).url);
-    };
-
-    // ===== USER HANDLERS =====
-    const handleAddUser = (user: Omit<User, 'id'>) => {
-        router.post(storeUser().url, user);
-    };
-
-    const handleEditUser = (userId: number, user: Omit<User, 'id'>) => {
-        router.put(updateUser(userId).url, user);
-    };
-
-    const handleDeleteUser = (userId: number) => {
-        router.delete(destroyUser(userId).url);
-    };
+    const handleAddUser    = (u: Omit<User, 'id'>) => router.post(storeUser().url, u);
+    const handleEditUser   = (id: number, u: Omit<User, 'id'>) => router.put(updateUser(id).url, u);
+    const handleDeleteUser = (id: number) => router.delete(destroyUser(id).url);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Office Management" />
-            <div className="space-y-4 p-4">
-                <h1 className="text-3xl font-bold">Office Management</h1>
 
-                <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as 'office' | 'positions' | 'users')} className="w-full">
-                    <TabsList>
-                        <TabsTrigger value="office">Offices</TabsTrigger>
-                        <TabsTrigger value="positions">Positions</TabsTrigger>
-                        <TabsTrigger value="users">Users</TabsTrigger>
+            <div className="space-y-6 p-4 md:p-6">
+                {/* Page heading */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">Office Management</h1>
+                    <p className="mt-1 text-sm text-gray-500">
+                        Manage offices, positions, and user accounts.
+                    </p>
+                </div>
+
+                {/* Tabs */}
+                <Tabs
+                    value={activeTab}
+                    onValueChange={(v) => handleTabChange(v as 'office' | 'positions' | 'users')}
+                    className="w-full"
+                >
+                    <TabsList className="h-10 rounded-lg bg-gray-100 p-1">
+                        <TabsTrigger value="office"    className="rounded-md px-4 text-sm font-medium">Offices</TabsTrigger>
+                        <TabsTrigger value="positions" className="rounded-md px-4 text-sm font-medium">Positions</TabsTrigger>
+                        <TabsTrigger value="users"     className="rounded-md px-4 text-sm font-medium">Users</TabsTrigger>
                     </TabsList>
 
-                    {/* Offices Tab */}
-                    <TabsContent value="office">
-                        <OfficeTab
-                            offices={offices}
-                            paginationRoute={officeManagement().url}
-                            paginationQuery={{ tab: 'office' }}
-                            onAddOffice={(office) =>
-                                handleAddOffice({ name: office.name })
-                            }
-                            onEditOffice={handleEditOffice}
-                            onDeleteOffice={handleDeleteOffice}
-                        />
-                    </TabsContent>
+                    <div className="mt-4 rounded-xl border bg-white shadow-sm">
+                        <TabsContent value="office" className="p-5">
+                            <OfficeTab
+                                offices={offices}
+                                paginationRoute={officeManagement().url}
+                                paginationQuery={{ tab: 'office' }}
+                                onAddOffice={(o) => handleAddOffice({ name: o.name })}
+                                onEditOffice={handleEditOffice}
+                                onDeleteOffice={handleDeleteOffice}
+                            />
+                        </TabsContent>
 
-                    {/* Positions Tab */}
-                    <TabsContent value="positions">
-                        <PositionTab
-                            positions={positions}
-                            paginationRoute={officeManagement().url}
-                            paginationQuery={{ tab: 'positions' }}
-                            onAddPosition={(position) =>
-                                handleAddPosition({ name: position.name })
-                            }
-                            onEditPosition={handleEditPosition}
-                            onDeletePosition={handleDeletePosition}
-                        />
-                    </TabsContent>
+                        <TabsContent value="positions" className="p-5">
+                            <PositionTab
+                                positions={positions}
+                                paginationRoute={officeManagement().url}
+                                paginationQuery={{ tab: 'positions' }}
+                                onAddPosition={(p) => handleAddPosition({ name: p.name })}
+                                onEditPosition={handleEditPosition}
+                                onDeletePosition={handleDeletePosition}
+                            />
+                        </TabsContent>
 
-                    {/* Users Tab */}
-                    <TabsContent value="users">
-                        <UserTab
-                            users={users}
-                            paginationRoute={officeManagement().url}
-                            paginationQuery={{ tab: 'users' }}
-                            positions={positions.data}
-                            offices={offices.data}
-                            onAddUser={handleAddUser}
-                            onEditUser={handleEditUser}
-                            onDeleteUser={handleDeleteUser}
-                        />
-                    </TabsContent>
+                        <TabsContent value="users" className="p-5">
+                            <UserTab
+                                users={users}
+                                paginationRoute={officeManagement().url}
+                                paginationQuery={{ tab: 'users' }}
+                                positions={positions.data}
+                                offices={offices.data}
+                                onAddUser={handleAddUser}
+                                onEditUser={handleEditUser}
+                                onDeleteUser={handleDeleteUser}
+                            />
+                        </TabsContent>
+                    </div>
                 </Tabs>
             </div>
         </AppLayout>

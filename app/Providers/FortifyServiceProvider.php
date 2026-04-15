@@ -106,7 +106,7 @@ class FortifyServiceProvider extends ServiceProvider
                 return '/supervisor/dashboard';
             }
             
-            return '/user-dashboard';
+            return '/accomplishment-report';
         });
     }
 }

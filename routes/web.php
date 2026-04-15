@@ -6,6 +6,7 @@ use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\Admin\OfficeManagementController;
 use App\Http\Controllers\Admin\SupervisorOfficeController;
+use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Supervisor\SupervisorController;
 use Illuminate\Support\Facades\Route;
@@ -28,18 +29,15 @@ Route::get('dashboard', function () {
         return redirect('/supervisor/dashboard');
     }
 
-    return redirect('/user-dashboard');
+    return redirect('/accomplishment-report');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// User/Employee Dashboard
-Route::get('user-dashboard', function () {
-    return Inertia::render('user/user-dashboard');
-})->middleware(['auth', 'verified', 'role:Employee'])->name('user-dashboard');
+
 
 // Admin Dashboard
-Route::get('admin-dashboard', function () {
-    return Inertia::render('admin/admin-dashboard');
-})->middleware(['auth', 'verified', 'role:Admin'])->name('admin-dashboard');
+Route::get('admin-dashboard', [AdminDashboardController::class, 'index'])
+    ->middleware(['auth', 'verified', 'role:Admin'])
+    ->name('admin-dashboard');
 
 // Employee Report Routes
 Route::middleware(['auth', 'verified', 'role:Employee'])->group(function () {

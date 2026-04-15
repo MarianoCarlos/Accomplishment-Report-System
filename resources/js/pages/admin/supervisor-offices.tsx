@@ -36,18 +36,28 @@ export default function SupervisorOffices({ offices, supervisors, assignments }:
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Supervisor Offices" />
-            <div className="space-y-4 p-4">
-                <h1 className="text-3xl font-bold">Supervisor Offices</h1>
-                <p className="text-sm text-gray-500">
-                    Assign supervisors to their respective offices.
-                </p>
-                <SupervisorOfficeTab
-                    offices={offices}
-                    paginationRoute={supervisorOffices().url}
-                    supervisors={supervisors}
-                    assignments={assignments}
-                    onAssign={handleAssign}
-                />
+
+            <div className="space-y-6 p-4 md:p-6">
+                {/* Page heading */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">Supervisor Offices</h1>
+                    <p className="mt-1 text-sm text-gray-500">
+                        Assign supervisors to their respective offices.
+                    </p>
+                </div>
+
+                {/* Card wrapper */}
+                <div className="rounded-xl border bg-white shadow-sm">
+                    <div className="p-5">
+                        <SupervisorOfficeTab
+                            offices={offices}
+                            paginationRoute={supervisorOffices().url}
+                            supervisors={supervisors}
+                            assignments={assignments}
+                            onAssign={handleAssign}
+                        />
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );

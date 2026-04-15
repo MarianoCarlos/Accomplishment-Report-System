@@ -4,7 +4,7 @@ import ActiveReports from '@/components/Accomplishment/ActiveReports';
 import ArchivedReports from '@/components/Accomplishment/ArchivedReports';
 import ReportPrintTemplate from '@/components/PrintTemplate/ReportPrintTemplate';
 import AppLayout from '@/layouts/app-layout';
-import { accomplishmentReport, userDashboard } from '@/routes';
+import { accomplishmentReport } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 export type ReportEntry = {
@@ -58,7 +58,6 @@ type Props = {
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: userDashboard().url },
     { title: 'Accomplishment Report', href: accomplishmentReport().url },
 ];
 
