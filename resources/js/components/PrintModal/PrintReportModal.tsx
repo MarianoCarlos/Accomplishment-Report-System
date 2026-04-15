@@ -265,7 +265,7 @@ export default function PrintReportModal({
                                                 });
                                             }
                                         }}
-                                        onFocus={() => setShowReviewerDropdown(true)}
+                                        onClick={() => setShowReviewerDropdown(true)}
                                         className={`pl-8 h-9 ${
                                             errors.reviewer ? 'border-red-500' : ''
                                         }`}
@@ -346,7 +346,7 @@ export default function PrintReportModal({
                                                 });
                                             }
                                         }}
-                                        onFocus={() => setShowApproverDropdown(true)}
+                                        onClick={() => setShowApproverDropdown(true)}
                                         className={`pl-8 h-9 ${
                                             errors.approver ? 'border-red-500' : ''
                                         }`}
