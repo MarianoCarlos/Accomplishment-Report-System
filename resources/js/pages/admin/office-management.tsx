@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { toast } from 'sonner';
 import OfficeTab from '@/components/admin/OfficeTab';
 import PositionTab from '@/components/admin/PositionTab';
 import UserTab from '@/components/admin/UserTab';
@@ -56,17 +57,17 @@ export default function OfficeManagement({
         );
     };
 
-    const handleAddOffice    = (office: { name: string }) => router.post(storeOffice().url, { name: office.name });
-    const handleEditOffice   = (id: number, name: string) => router.put(updateOffice(id).url, { name });
-    const handleDeleteOffice = (id: number)               => router.delete(destroyOffice(id).url);
+    const handleAddOffice    = (office: { name: string }) => router.post(storeOffice().url, { name: office.name }, { preserveScroll: true, onSuccess: () => toast.success('Office added successfully') });
+    const handleEditOffice   = (id: number, name: string) => router.put(updateOffice(id).url, { name }, { preserveScroll: true, onSuccess: () => toast.success('Office updated successfully') });
+    const handleDeleteOffice = (id: number)               => router.delete(destroyOffice(id).url, { preserveScroll: true, onSuccess: () => toast.success('Office deleted successfully') });
 
-    const handleAddPosition    = (p: { name: string }) => router.post(storePosition().url, { name: p.name });
-    const handleEditPosition   = (id: number, name: string) => router.put(updatePosition(id).url, { name });
-    const handleDeletePosition = (id: number)               => router.delete(destroyPosition(id).url);
+    const handleAddPosition    = (p: { name: string }) => router.post(storePosition().url, { name: p.name }, { preserveScroll: true, onSuccess: () => toast.success('Position added successfully') });
+    const handleEditPosition   = (id: number, name: string) => router.put(updatePosition(id).url, { name }, { preserveScroll: true, onSuccess: () => toast.success('Position updated successfully') });
+    const handleDeletePosition = (id: number)               => router.delete(destroyPosition(id).url, { preserveScroll: true, onSuccess: () => toast.success('Position deleted successfully') });
 
-    const handleAddUser    = (u: Omit<User, 'id'>) => router.post(storeUser().url, u);
-    const handleEditUser   = (id: number, u: Omit<User, 'id'>) => router.put(updateUser(id).url, u);
-    const handleDeleteUser = (id: number) => router.delete(destroyUser(id).url);
+    const handleAddUser    = (u: Omit<User, 'id'>) => router.post(storeUser().url, u, { preserveScroll: true, onSuccess: () => toast.success('User added successfully') });
+    const handleEditUser   = (id: number, u: Omit<User, 'id'>) => router.put(updateUser(id).url, u, { preserveScroll: true, onSuccess: () => toast.success('User updated successfully') });
+    const handleDeleteUser = (id: number) => router.delete(destroyUser(id).url, { preserveScroll: true, onSuccess: () => toast.success('User deleted successfully') });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

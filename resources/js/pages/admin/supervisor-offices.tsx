@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { toast } from 'sonner';
 import SupervisorOfficeTab from '@/components/admin/SupervisorOfficeTab';
 import AppLayout from '@/layouts/app-layout';
 import { adminDashboard } from '@/routes';
@@ -30,7 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function SupervisorOffices({ offices, supervisors, assignments }: Props) {
     const handleAssign = (officeId: number, supervisorId: number | null) => {
-        router.patch(assign(officeId).url, { supervisor_id: supervisorId });
+        router.patch(assign(officeId).url, { supervisor_id: supervisorId }, { preserveScroll: true, onSuccess: () => toast.success('Supervisor assigned successfully') });
     };
 
     return (
