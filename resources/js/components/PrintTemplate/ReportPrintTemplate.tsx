@@ -17,6 +17,8 @@ type Props = {
     office: string;
     reviewer: string;
     approver: string;
+    reviewerPosition?: string;
+    approverPosition?: string;
 };
 
 function generateDays(start: string, end: string) {
@@ -38,6 +40,8 @@ export default function ReportPrintTemplate({
     office,
     reviewer,
     approver,
+    reviewerPosition,
+    approverPosition,
 }: Props) {
     const { auth } = usePage<PageProps>().props;
     const userName = auth.user.name;
@@ -48,18 +52,21 @@ export default function ReportPrintTemplate({
     const days = generateDays(startDate, endDate);
 
     return (
-        <div className="print-content hidden bg-white p-10 text-sm text-black print:block print:p-12">
+        <div 
+            className="print-content hidden bg-white p-10 text-black print:block print:p-12"
+            style={{ fontFamily: '"Times New Roman", Times, serif', fontSize: '12pt' }}
+        >
             {/* HEADER */}
             <div className="mb-6">
                 {/* Top Row */}
-                <div className="flex justify-end">
-                    <p className="font-semibold">ANNEX "C"</p>
+                <div className="flex justify-end mb-2">
+                    <p className="font-bold">ANNEX "C"</p>
                 </div>
 
                 {/* Centered Title */}
                 <div className="text-center">
-                    <p className="text-base font-bold">ACCOMPLISHMENT REPORT</p>
-                    <p>
+                    <p className="font-bold uppercase">ACCOMPLISHMENT REPORT</p>
+                    <p className="font-bold">
                         {format(new Date(startDate + 'T00:00:00'), 'MMMM d')} –{' '}
                         {format(new Date(endDate + 'T00:00:00'), 'd, yyyy')}
                     </p>
@@ -67,26 +74,20 @@ export default function ReportPrintTemplate({
             </div>
 
             {/* PERSON DETAILS */}
-            <div className="mb-4 space-y-1">
-                <p>
-                    <strong>NAME OF PERSONNEL:</strong> {userName}
-                </p>
-                <p>
-                    <strong>POSITION:</strong> {position}
-                </p>
-                <p>
-                    <strong>OFFICE:</strong> {office}
-                </p>
+            <div className="mb-4 space-y-0.5 uppercase">
+                <p>NAME OF PERSONNEL: {userName}</p>
+                <p>POSITION: {position}</p>
+                <p>OFFICE: {office}</p>
             </div>
 
             {/* TABLE */}
             <table className="w-full table-fixed border-collapse border border-black">
                 <thead>
                     <tr>
-                        <th className="w-32 border border-black p-2">
-                            DATE (DAILY)
+                        <th className="w-36 border border-black p-2 align-middle text-center font-bold uppercase leading-snug">
+                            DATE<br />(DAILY)
                         </th>
-                        <th className="border border-black p-2">
+                        <th className="border border-black p-2 align-middle text-center font-bold uppercase">
                             DETAILED ACCOMPLISHMENT REPORT
                         </th>
                     </tr>
@@ -97,12 +98,12 @@ export default function ReportPrintTemplate({
 
                         return (
                             <tr key={key} className="break-inside-avoid">
-                                <td className="border border-black p-2 text-center align-middle">
+                                <td className="border border-black p-2 text-center align-middle font-bold">
                                     {format(date, 'MMM d, yyyy')}
                                 </td>
 
                                 <td
-                                    className="border border-black p-2 align-top break-words whitespace-pre-wrap"
+                                    className="border border-black p-2 align-top break-words whitespace-pre-wrap leading-relaxed"
                                     dangerouslySetInnerHTML={{
                                         __html: DOMPurify.sanitize(report.entries[key]?.content ?? ''),
                                     }}
@@ -114,35 +115,46 @@ export default function ReportPrintTemplate({
             </table>
 
             {/* TOTAL DAYS */}
-            <div className="mt-3">
-                <p>
-                    <strong>Total Days:</strong> {days.length}
-                </p>
+            <div className="mt-2">
+                <p>Total Days: {days.length}</p>
             </div>
 
             {/* SIGNATURE SECTION */}
-            <div className="mt-10 grid grid-cols-2 gap-10">
+            <div className="mt-8 grid grid-cols-2 gap-x-10 gap-y-12 uppercase">
                 <div>
-                    <p className="font-semibold">SUBMITTED BY:</p>
-                    <div className="mt-8 border-t border-black pt-2">
-                        {userName}
-                        <br />
-                        {position}
+                    <p className="mb-12">SUBMITTED BY:</p>
+                    <div>
+                        <div className="inline-block border-b border-black min-w-[240px] pb-0.5">
+                            {userName}
+                        </div>
+                        <p className="mt-1 capitalize">{position.toLowerCase()}</p>
                     </div>
                 </div>
 
-                <div>
-                    <p className="font-semibold">REVIEWED BY:</p>
-                    <div className="mt-8 border-t border-black pt-2">
-                        {reviewer}
+                <div className="space-y-12">
+                    <div>
+                        <p className="mb-12">REVIEWED BY:</p>
+                        <div>
+                            <div className="inline-block border-b border-black min-w-[280px] pb-0.5">
+                                {reviewer}
+                            </div>
+                            {reviewerPosition && (
+                                <p className="mt-1 capitalize">{reviewerPosition.toLowerCase()}</p>
+                            )}
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div className="mt-10">
-                <p className="font-semibold">APPROVED BY:</p>
-                <div className="mt-8 w-64 border-t border-black pt-2">
-                    {approver}
+                    <div>
+                        <p className="mb-12">APPROVED BY:</p>
+                        <div>
+                            <div className="inline-block border-b border-black min-w-[280px] pb-0.5">
+                                {approver}
+                            </div>
+                            {approverPosition && (
+                                <p className="mt-1 capitalize">{approverPosition.toLowerCase()}</p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

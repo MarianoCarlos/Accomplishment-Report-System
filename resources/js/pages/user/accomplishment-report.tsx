@@ -90,15 +90,25 @@ export default function AccomplishmentReport({ activeReports, archivedReports, o
             </div>
 
             {/* PRINT DOCUMENT (OUTSIDE LAYOUT) */}
-            {printData && (
-                <ReportPrintTemplate
-                    report={printData.report}
-                    position={printData.position}
-                    office={printData.office}
-                    reviewer={printData.reviewer}
-                    approver={printData.approver}
-                />
-            )}
+            {printData && (() => {
+                const rUser = users.find(u => u.name === printData.reviewer);
+                const rPos = rUser?.position_id ? positions.find(p => p.id === rUser.position_id)?.name : undefined;
+
+                const aUser = users.find(u => u.name === printData.approver);
+                const aPos = aUser?.position_id ? positions.find(p => p.id === aUser.position_id)?.name : undefined;
+
+                return (
+                    <ReportPrintTemplate
+                        report={printData.report}
+                        position={printData.position}
+                        office={printData.office}
+                        reviewer={printData.reviewer}
+                        approver={printData.approver}
+                        reviewerPosition={rPos}
+                        approverPosition={aPos}
+                    />
+                );
+            })()}
         </>
     );
 }
