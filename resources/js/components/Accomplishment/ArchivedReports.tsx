@@ -8,6 +8,7 @@ import {
     ChevronRight,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import * as ReportController from '@/actions/App/Http/Controllers/ReportController';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -93,7 +94,12 @@ export default function ArchivedReports({ archivedReports }: Props) {
         router.patch(
             ReportController.restore(id).url,
             {},
-            { preserveScroll: true },
+            { 
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Report restored successfully.');
+                }
+            },
         );
     };
 
@@ -102,7 +108,12 @@ export default function ArchivedReports({ archivedReports }: Props) {
             router.patch(
                 ReportController.restore(report.id).url,
                 {},
-                { preserveScroll: true },
+                { 
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        toast.success('Report restored successfully.');
+                    }
+                },
             );
         });
     };

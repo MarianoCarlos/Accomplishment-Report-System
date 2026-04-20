@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { ChevronDown, ChevronUp, Archive, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+import { toast } from 'sonner';
 import * as ReportController from '@/actions/App/Http/Controllers/ReportController';
 import * as ReportEntryController from '@/actions/App/Http/Controllers/ReportEntryController';
 import TiptapEditor from '@/components/Editor/TiptapEditor';
@@ -10,6 +11,14 @@ import PrintReportModal from '@/components/PrintModal/PrintReportModal';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Popover,
     PopoverContent,
@@ -89,6 +98,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
     const [open, setOpen] = useState(false);
     const [range, setRange] = useState<DateRange | undefined>();
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [reportToDelete, setReportToDelete] = useState<number | null>(null);
 
     const updateEntry = (entryId: number, value: string) => {
         router.patch(
@@ -118,6 +128,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                 onSuccess: () => {
                     setRange(undefined);
                     setOpen(false);
+                    toast.success('Accomplishment report created.');
                 },
             },
         );
@@ -129,19 +140,23 @@ export default function ActiveReports({ reports, setPrintData, offices, position
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => setExpandedId(null),
+                onSuccess: () => {
+                    setExpandedId(null);
+                    toast.success('Report archived successfully.');
+                },
             },
         );
     };
 
     const deleteReport = (id: number) => {
-        if (!confirm('Are you sure you want to permanently delete this report? This cannot be undone.')) return;
-
         router.delete(
             ReportController.destroy(id).url,
             {
                 preserveScroll: true,
-                onSuccess: () => setExpandedId(null),
+                onSuccess: () => {
+                    setExpandedId(null);
+                    toast.success('Report deleted permanently.');
+                },
             },
         );
     };
@@ -278,7 +293,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                             <button
                                                 disabled={isDisabled}
                                                 onClick={() =>
-                                                    deleteReport(report.id)
+                                                    setReportToDelete(report.id)
                                                 }
                                                 className="text-destructive transition hover:opacity-80 disabled:pointer-events-none"
                                                 title="Delete"
@@ -364,7 +379,10 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                         <div className="mt-6 flex justify-end gap-2 print:hidden">
                             <Button
                                 variant="success"
-                                onClick={() => setExpandedId(null)}
+                                onClick={() => {
+                                    setExpandedId(null);
+                                    toast.success('Draft saved successfully.');
+                                }}
                             >
                                 Save as Draft
                             </Button>
@@ -428,6 +446,29 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                     }}
                 />
             </div>
+
+            {/* Deletion Confirmation Dialog */}
+            <Dialog open={reportToDelete !== null} onOpenChange={(open) => {
+                if (!open) setReportToDelete(null);
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Delete Accomplishment Report</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to permanently delete this report? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setReportToDelete(null)}>Cancel</Button>
+                        <Button variant="destructive" onClick={() => {
+                            if (reportToDelete) {
+                                deleteReport(reportToDelete);
+                                setReportToDelete(null);
+                            }
+                        }}>Delete</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* PRINT TEMPLATE - visible only when printing */}
         </>
