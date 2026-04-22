@@ -85,7 +85,10 @@ class SupervisorController extends Controller
     private function loadAssignedOffices()
     {
         return Office::query()
-            ->where('supervisor_id', auth()->id())
+            ->where(function ($q) {
+                $q->where('supervisor_id', auth()->id())
+                  ->orWhere('alternate_supervisor_id', auth()->id());
+            })
             ->with([
                 'members' => fn ($query) => $query
                     ->where('role', 'Employee')

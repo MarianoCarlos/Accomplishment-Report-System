@@ -17,15 +17,16 @@ class SupervisorOfficeController extends Controller
         $perPage = max(5, min(50, (int) $request->integer('per_page', 10)));
 
         $offices = Office::orderBy('name')
-            ->paginate($perPage, ['id', 'name', 'supervisor_id'], 'supervisor_office_page')
+            ->paginate($perPage, ['id', 'name', 'supervisor_id', 'alternate_supervisor_id'], 'supervisor_office_page')
             ->withQueryString();
 
         $officeIds = $offices->getCollection()->pluck('id');
 
         return Inertia::render('admin/supervisor-offices', [
-            'offices'     => $offices,
-            'supervisors' => User::where('role', 'Supervisor')->orderBy('name')->get(['id', 'name', 'email']),
-            'assignments' => Office::whereIn('id', $officeIds)->pluck('supervisor_id', 'id'),
+            'offices'              => $offices,
+            'supervisors'          => User::where('role', 'Supervisor')->orderBy('name')->get(['id', 'name', 'email']),
+            'assignments'          => Office::whereIn('id', $officeIds)->pluck('supervisor_id', 'id'),
+            'alternateAssignments' => Office::whereIn('id', $officeIds)->pluck('alternate_supervisor_id', 'id'),
         ]);
     }
 
@@ -35,15 +36,40 @@ class SupervisorOfficeController extends Controller
             'supervisor_id' => [
                 'nullable',
                 'integer',
-                function ($attribute, $value, $fail) {
+                function ($attribute, $value, $fail) use ($office) {
                     if ($value !== null && !User::where('id', $value)->where('role', 'Supervisor')->exists()) {
                         $fail('The selected user is not a supervisor.');
+                    }
+                    if ($value !== null && $value == $office->alternate_supervisor_id) {
+                        $fail('Primary and alternate supervisors must be different people.');
                     }
                 },
             ],
         ]);
 
         $office->update(['supervisor_id' => $validated['supervisor_id']]);
+
+        return redirect()->back();
+    }
+
+    public function assignAlternate(Request $request, Office $office): RedirectResponse
+    {
+        $validated = $request->validate([
+            'alternate_supervisor_id' => [
+                'nullable',
+                'integer',
+                function ($attribute, $value, $fail) use ($office) {
+                    if ($value !== null && !User::where('id', $value)->where('role', 'Supervisor')->exists()) {
+                        $fail('The selected user is not a supervisor.');
+                    }
+                    if ($value !== null && $value == $office->supervisor_id) {
+                        $fail('Primary and alternate supervisors must be different people.');
+                    }
+                },
+            ],
+        ]);
+
+        $office->update(['alternate_supervisor_id' => $validated['alternate_supervisor_id']]);
 
         return redirect()->back();
     }

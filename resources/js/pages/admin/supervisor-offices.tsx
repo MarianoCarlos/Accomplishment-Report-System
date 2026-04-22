@@ -4,7 +4,7 @@ import SupervisorOfficeTab from '@/components/admin/SupervisorOfficeTab';
 import AppLayout from '@/layouts/app-layout';
 import { adminDashboard } from '@/routes';
 import { supervisorOffices } from '@/routes/admin';
-import { assign } from '@/routes/admin/supervisor-offices';
+import { assign, assignAlternate } from '@/routes/admin/supervisor-offices';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 interface Office {
@@ -22,6 +22,7 @@ interface Props {
     offices: PaginatedData<Office>;
     supervisors: Supervisor[];
     assignments: Record<number, number | null>;
+    alternateAssignments: Record<number, number | null>;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,9 +30,21 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Supervisor Offices', href: supervisorOffices().url },
 ];
 
-export default function SupervisorOffices({ offices, supervisors, assignments }: Props) {
+export default function SupervisorOffices({ offices, supervisors, assignments, alternateAssignments }: Props) {
     const handleAssign = (officeId: number, supervisorId: number | null) => {
-        router.patch(assign(officeId).url, { supervisor_id: supervisorId }, { preserveScroll: true, onSuccess: () => toast.success('Supervisor assigned successfully') });
+        router.patch(
+            assign(officeId).url,
+            { supervisor_id: supervisorId },
+            { preserveScroll: true, onSuccess: () => toast.success('Primary supervisor assigned successfully') },
+        );
+    };
+
+    const handleAssignAlternate = (officeId: number, supervisorId: number | null) => {
+        router.patch(
+            assignAlternate(officeId).url,
+            { alternate_supervisor_id: supervisorId },
+            { preserveScroll: true, onSuccess: () => toast.success('Alternate supervisor assigned successfully') },
+        );
     };
 
     return (
@@ -43,7 +56,7 @@ export default function SupervisorOffices({ offices, supervisors, assignments }:
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900">Supervisor Offices</h1>
                     <p className="mt-1 text-sm text-gray-500">
-                        Assign supervisors to their respective offices.
+                        Assign primary and alternate supervisors to their respective offices.
                     </p>
                 </div>
 
@@ -55,7 +68,9 @@ export default function SupervisorOffices({ offices, supervisors, assignments }:
                             paginationRoute={supervisorOffices().url}
                             supervisors={supervisors}
                             assignments={assignments}
+                            alternateAssignments={alternateAssignments}
                             onAssign={handleAssign}
+                            onAssignAlternate={handleAssignAlternate}
                         />
                     </div>
                 </div>

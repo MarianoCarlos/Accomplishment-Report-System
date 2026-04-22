@@ -4,6 +4,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportEntryController;
 use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\PositionController;
+use App\Http\Controllers\Admin\AdminReportViewController;
 use App\Http\Controllers\Admin\OfficeManagementController;
 use App\Http\Controllers\Admin\SupervisorOfficeController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -56,8 +57,6 @@ Route::middleware(['auth', 'verified', 'role:Employee'])->group(function () {
     Route::delete('/reports/{report}', [ReportController::class, 'destroy'])
         ->name('reports.destroy');
 
-    Route::patch('/reports/{report}/print-details', [ReportController::class, 'updatePrintDetails'])
-        ->name('reports.print-details');
 
     Route::patch('/report-entries/{entry}', [ReportEntryController::class, 'update'])
         ->name('report-entries.update');
@@ -82,6 +81,12 @@ Route::middleware(['auth', 'verified', 'role:Admin'])->group(function () {
 
     Route::patch('/admin/supervisor-offices/{office}/assign', [SupervisorOfficeController::class, 'assign'])
         ->name('admin.supervisor-offices.assign');
+
+    Route::patch('/admin/supervisor-offices/{office}/assign-alternate', [SupervisorOfficeController::class, 'assignAlternate'])
+        ->name('admin.supervisor-offices.assign-alternate');
+
+    Route::get('/admin/office-report', [AdminReportViewController::class, 'index'])
+        ->name('admin.office-report');
 
     Route::resource('offices', OfficeController::class);
 

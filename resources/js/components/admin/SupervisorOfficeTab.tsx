@@ -1,4 +1,4 @@
-import { Search, UserCheck } from 'lucide-react';
+import { Search, UserCheck, UserCog } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import AdminPagination from '@/components/admin/AdminPagination';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,9 @@ interface SupervisorOfficeTabProps {
     paginationQuery?: Record<string, string | number | null | undefined>;
     supervisors: Supervisor[];
     assignments: Record<number, number | null>;
+    alternateAssignments: Record<number, number | null>;
     onAssign: (officeId: number, supervisorId: number | null) => void;
+    onAssignAlternate: (officeId: number, supervisorId: number | null) => void;
 }
 
 export default function SupervisorOfficeTab({
@@ -35,11 +37,14 @@ export default function SupervisorOfficeTab({
     paginationQuery,
     supervisors,
     assignments,
+    alternateAssignments,
     onAssign,
+    onAssignAlternate,
 }: SupervisorOfficeTabProps) {
     const [search, setSearch] = useState('');
     const [selectedOfficeId, setSelectedOfficeId] = useState<number | null>(null);
     const [pendingSupervisorId, setPendingSupervisorId] = useState<number | null>(null);
+    const [pendingAlternateSupervisorId, setPendingAlternateSupervisorId] = useState<number | null>(null);
 
     const filtered = offices.data.filter((o) =>
         o.name.toLowerCase().includes(search.toLowerCase()),
@@ -50,6 +55,11 @@ export default function SupervisorOfficeTab({
         return sid != null ? (supervisors.find((s) => s.id === sid) ?? null) : null;
     };
 
+    const getAlternateSupervisor = (officeId: number): Supervisor | null => {
+        const sid = alternateAssignments[officeId];
+        return sid != null ? (supervisors.find((s) => s.id === sid) ?? null) : null;
+    };
+
     const toggleOffice = (office: Office) => {
         if (selectedOfficeId === office.id) {
             setSelectedOfficeId(null);
@@ -57,11 +67,13 @@ export default function SupervisorOfficeTab({
         }
         setSelectedOfficeId(office.id);
         setPendingSupervisorId(assignments[office.id] ?? null);
+        setPendingAlternateSupervisorId(alternateAssignments[office.id] ?? null);
     };
 
     const handleSave = () => {
         if (selectedOfficeId === null) return;
         onAssign(selectedOfficeId, pendingSupervisorId);
+        onAssignAlternate(selectedOfficeId, pendingAlternateSupervisorId);
         setSelectedOfficeId(null);
     };
 
@@ -87,14 +99,15 @@ export default function SupervisorOfficeTab({
                     <TableHeader className="bg-gray-50">
                         <TableRow className="border-b border-gray-200">
                             <TableHead className="h-10 pl-4 font-semibold text-gray-600">Office</TableHead>
-                            <TableHead className="h-10 font-semibold text-gray-600">Assigned Supervisor</TableHead>
+                            <TableHead className="h-10 font-semibold text-gray-600">Primary Supervisor</TableHead>
+                            <TableHead className="h-10 font-semibold text-gray-600">Alternate Supervisor</TableHead>
                             <TableHead className="h-10 pr-4 w-24 text-right font-semibold text-gray-600">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filtered.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={3} className="py-10 text-center text-sm text-gray-400">
+                                <TableCell colSpan={4} className="py-10 text-center text-sm text-gray-400">
                                     <div className="flex flex-col items-center gap-2">
                                         <Search className="h-5 w-5 text-gray-300" />
                                         <span>No offices found</span>
@@ -104,6 +117,7 @@ export default function SupervisorOfficeTab({
                         ) : (
                             filtered.map((office) => {
                                 const supervisor = getSupervisor(office.id);
+                                const alternateSupervisor = getAlternateSupervisor(office.id);
                                 const isSelected = selectedOfficeId === office.id;
 
                                 return (
@@ -116,15 +130,29 @@ export default function SupervisorOfficeTab({
                                             <TableCell className="h-12 pl-4 font-medium text-gray-900">
                                                 {office.name}
                                             </TableCell>
+                                            {/* Primary supervisor */}
                                             <TableCell className="h-12">
                                                 {supervisor ? (
-                                                    <Badge variant="secondary" className="text-xs">
+                                                    <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
                                                         <UserCheck className="mr-1 h-3 w-3" />
                                                         {supervisor.name}
                                                     </Badge>
                                                 ) : (
                                                     <span className="text-xs italic text-gray-400">
                                                         No supervisor assigned
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                            {/* Alternate supervisor */}
+                                            <TableCell className="h-12">
+                                                {alternateSupervisor ? (
+                                                    <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">
+                                                        <UserCog className="mr-1 h-3 w-3" />
+                                                        {alternateSupervisor.name}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-xs italic text-gray-400">
+                                                        No alternate assigned
                                                     </span>
                                                 )}
                                             </TableCell>
@@ -145,16 +173,19 @@ export default function SupervisorOfficeTab({
                                         {/* Inline assignment editor */}
                                         {isSelected && (
                                             <TableRow className="border-b border-blue-100 bg-blue-50/60">
-                                                <TableCell colSpan={3} className="px-4 py-3">
-                                                    <div className="flex flex-wrap items-end gap-3">
+                                                <TableCell colSpan={4} className="px-4 py-4">
+                                                    <div className="flex flex-wrap items-end gap-4">
+
+                                                        {/* Primary supervisor select */}
                                                         <div className="flex-1 space-y-1 min-w-[220px]">
                                                             <Label
                                                                 htmlFor={`sup-select-${office.id}`}
-                                                                className="text-xs font-medium text-gray-600"
+                                                                className="flex items-center gap-1.5 text-xs font-medium text-gray-600"
                                                             >
-                                                                Supervisor for{' '}
-                                                                <span className="font-semibold text-gray-800">
-                                                                    {office.name}
+                                                                <UserCheck className="h-3.5 w-3.5 text-blue-500" />
+                                                                <span>
+                                                                    Primary Supervisor —{' '}
+                                                                    <span className="font-semibold text-gray-800">{office.name}</span>
                                                                 </span>
                                                             </Label>
                                                             <Select
@@ -174,13 +205,59 @@ export default function SupervisorOfficeTab({
                                                                 <SelectContent>
                                                                     <SelectItem value="__none__">— None —</SelectItem>
                                                                     {supervisors.map((s) => (
-                                                                        <SelectItem key={s.id} value={s.id.toString()}>
+                                                                        <SelectItem
+                                                                            key={s.id}
+                                                                            value={s.id.toString()}
+                                                                            disabled={s.id === pendingAlternateSupervisorId}
+                                                                        >
                                                                             {s.name}
+                                                                            {s.id === pendingAlternateSupervisorId && ' (already alternate)'}
                                                                         </SelectItem>
                                                                     ))}
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
+
+                                                        {/* Alternate supervisor select */}
+                                                        <div className="flex-1 space-y-1 min-w-[220px]">
+                                                            <Label
+                                                                htmlFor={`alt-select-${office.id}`}
+                                                                className="flex items-center gap-1.5 text-xs font-medium text-gray-600"
+                                                            >
+                                                                <UserCog className="h-3.5 w-3.5 text-amber-500" />
+                                                                <span>Alternate Supervisor</span>
+                                                            </Label>
+                                                            <Select
+                                                                value={pendingAlternateSupervisorId?.toString() ?? '__none__'}
+                                                                onValueChange={(val) =>
+                                                                    setPendingAlternateSupervisorId(
+                                                                        val === '__none__' ? null : Number(val),
+                                                                    )
+                                                                }
+                                                            >
+                                                                <SelectTrigger
+                                                                    id={`alt-select-${office.id}`}
+                                                                    className="h-9 bg-white text-sm"
+                                                                >
+                                                                    <SelectValue placeholder="Select an alternate (optional)" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="__none__">— None —</SelectItem>
+                                                                    {supervisors.map((s) => (
+                                                                        <SelectItem
+                                                                            key={s.id}
+                                                                            value={s.id.toString()}
+                                                                            disabled={s.id === pendingSupervisorId}
+                                                                        >
+                                                                            {s.name}
+                                                                            {s.id === pendingSupervisorId && ' (already primary)'}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        {/* Action buttons */}
                                                         <div className="flex gap-2">
                                                             <Button
                                                                 size="sm"
@@ -199,6 +276,11 @@ export default function SupervisorOfficeTab({
                                                             </Button>
                                                         </div>
                                                     </div>
+
+                                                    {/* Hint text */}
+                                                    <p className="mt-2 text-xs text-gray-400">
+                                                        The alternate supervisor will have full access to this office when the primary supervisor is unavailable.
+                                                    </p>
                                                 </TableCell>
                                             </TableRow>
                                         )}

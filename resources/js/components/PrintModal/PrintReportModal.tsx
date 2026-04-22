@@ -158,7 +158,7 @@ export default function PrintReportModal({
     const handlePrint = () => {
         // Validate all required fields
         const newErrors: Record<string, string> = {};
-        
+
         if (!selectedOffice.trim()) {
             newErrors.office = 'Office is required';
         }
@@ -266,9 +266,8 @@ export default function PrintReportModal({
                                             }
                                         }}
                                         onClick={() => setShowReviewerDropdown(true)}
-                                        className={`pl-8 h-9 ${
-                                            errors.reviewer ? 'border-red-500' : ''
-                                        }`}
+                                        className={`pl-8 h-9 ${errors.reviewer ? 'border-red-500' : ''
+                                            }`}
                                     />
                                     {selectedReviewer && (
                                         <button
@@ -292,10 +291,6 @@ export default function PrintReportModal({
                                                     key={user.id}
                                                     onClick={() => {
                                                         setSelectedReviewer(user.name);
-                                                        // Auto-fill position if user has position assigned
-                                                        if (user.position_id) {
-                                                            setSelectedPosition(getPositionName(user.position_id));
-                                                        }
                                                         setReviewerSearch('');
                                                         setShowReviewerDropdown(false);
                                                     }}
@@ -347,9 +342,8 @@ export default function PrintReportModal({
                                             }
                                         }}
                                         onClick={() => setShowApproverDropdown(true)}
-                                        className={`pl-8 h-9 ${
-                                            errors.approver ? 'border-red-500' : ''
-                                        }`}
+                                        className={`pl-8 h-9 ${errors.approver ? 'border-red-500' : ''
+                                            }`}
                                     />
                                     {selectedApprover && (
                                         <button
@@ -373,10 +367,6 @@ export default function PrintReportModal({
                                                     key={user.id}
                                                     onClick={() => {
                                                         setSelectedApprover(user.name);
-                                                        // Auto-fill position if user has position assigned
-                                                        if (user.position_id) {
-                                                            setSelectedPosition(getPositionName(user.position_id));
-                                                        }
                                                         setApproverSearch('');
                                                         setShowApproverDropdown(false);
                                                     }}

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReportRequest;
-use App\Http\Requests\UpdatePrintDetailsRequest;
 use App\Models\Report;
 use App\Models\Office;
 use App\Models\Position;
@@ -98,12 +97,6 @@ class ReportController extends Controller
         return back();
     }
 
-    public function updatePrintDetails(UpdatePrintDetailsRequest $request, Report $report)
-    {
-        $report->update($request->validated());
-
-        return back();
-    }
 
     private function transformReports($reports)
     {
@@ -120,10 +113,6 @@ class ReportController extends Controller
                         ],
                     ];
                 }),
-                'office' => $report->office,
-                'position' => $report->position,
-                'reviewer' => $report->reviewer,
-                'approver' => $report->approver,
             ];
         });
     }

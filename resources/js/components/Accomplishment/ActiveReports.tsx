@@ -409,40 +409,20 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                     onConfirm={(reviewer, approver, modalOffice, modalPosition) => {
                         if (!expandedReport) return;
 
-                        router.patch(
-                            ReportController.updatePrintDetails(expandedReport.id).url,
-                            {
-                                office: modalOffice,
-                                position: modalPosition,
-                                reviewer,
-                                approver,
-                            },
-                            {
-                                preserveScroll: true,
-                                onSuccess: () => {
-                                    setPrintData({
-                                        report: {
-                                            ...expandedReport,
-                                            office: modalOffice,
-                                            position: modalPosition,
-                                            reviewer,
-                                            approver,
-                                        },
-                                        position: modalPosition,
-                                        office: modalOffice,
-                                        reviewer,
-                                        approver,
-                                    });
+                        setPrintData({
+                            report: expandedReport,
+                            position: modalPosition,
+                            office: modalOffice,
+                            reviewer,
+                            approver,
+                        });
 
-                                    setIsPrintModalOpen(false);
+                        setIsPrintModalOpen(false);
 
-                                    setTimeout(() => {
-                                        window.print();
-                                        setExpandedId(null);
-                                    }, 200);
-                                },
-                            },
-                        );
+                        setTimeout(() => {
+                            window.print();
+                            setExpandedId(null);
+                        }, 200);
                     }}
                 />
             </div>

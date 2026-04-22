@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ClipboardList, LayoutGrid, Menu, Building2, Users } from 'lucide-react';
+import { ClipboardList, LayoutGrid, Menu, Building2, Users, FileText } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
 import { accomplishmentReport, adminDashboard, supervisor as supervisorPage } from '@/routes';
-import { officeManagement, supervisorOffices } from '@/routes/admin';
+import { officeManagement, supervisorOffices, officeReport } from '@/routes/admin';
 import { dashboard as supervisorDashboard } from '@/routes/supervisor';
 import type { BreadcrumbItem, NavItem, SharedData } from '@/types';
 import AppLogo from './app-logo';
@@ -60,6 +60,11 @@ const adminNavItems: NavItem[] = [
         href: supervisorOffices(),
         icon: Users,
     },
+    {
+        title: 'Office Report',
+        href: officeReport(),
+        icon: FileText,
+    },
 ];
 
 const supervisorNavItems: NavItem[] = [
@@ -83,7 +88,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const { auth } = page.props;
     const getInitials = useInitials();
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
-    
+
     const navItems = auth.user.role === 'Admin'
         ? adminNavItems
         : auth.user.role === 'Supervisor'

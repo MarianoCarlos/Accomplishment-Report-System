@@ -17,11 +17,6 @@ return new class extends Migration {
             $table->date('start_date');
             $table->date('end_date');
 
-            $table->string('office')->nullable();
-            $table->string('position')->nullable();
-            $table->string('reviewer')->nullable();
-            $table->string('approver')->nullable();
-
             $table->boolean('is_archived')->default(false);
 
             $table->timestamps();
