@@ -1,12 +1,16 @@
-﻿import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import DOMPurify from 'dompurify';
-import { ArrowLeft, Building2, CalendarDays, ChevronRight, FileText, Folder, Users } from 'lucide-react';
+import { ArrowLeft, Building2, CalendarDays, ChevronRight, FileText, Folder, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 import AppLayout from '@/layouts/app-layout';
+import * as SupervisorController from '@/actions/App/Http/Controllers/Supervisor/SupervisorController';
 import { supervisor as supervisorRoute } from '@/routes';
 import { dashboard as supervisorDashboard } from '@/routes/supervisor';
 import type { BreadcrumbItem, SharedData } from '@/types';
@@ -41,6 +45,9 @@ interface MemberReport {
     id: number;
     startDate: string | null;
     endDate: string | null;
+    reviewStatus?: 'draft' | 'submitted' | 'resubmitted' | 'approved' | 'rejected';
+    reviewRemarks?: string | null;
+    reviewedAt?: string | null;
     entries: ReportEntry[];
 }
 
@@ -50,6 +57,9 @@ interface ReportGroup {
     startDate: string | null;
     endDate: string | null;
     latestDate: string | null;
+    reviewStatus?: 'draft' | 'submitted' | 'resubmitted' | 'approved' | 'rejected';
+    reviewRemarks?: string | null;
+    reviewedAt?: string | null;
     entries: ReportEntry[];
 }
 
@@ -217,6 +227,9 @@ function buildYearGroups(member: OfficeMember | null): YearGroup[] {
                 startDate: report.startDate,
                 endDate: report.endDate,
                 latestDate: report.endDate ?? report.startDate,
+                reviewStatus: report.reviewStatus,
+                reviewRemarks: report.reviewRemarks,
+                reviewedAt: report.reviewedAt,
                 entries: [],
             });
 
@@ -233,6 +246,9 @@ function buildYearGroups(member: OfficeMember | null): YearGroup[] {
                 startDate: report.startDate,
                 endDate: report.endDate,
                 latestDate: sortedEntries[0]?.date ?? null,
+                reviewStatus: report.reviewStatus,
+                reviewRemarks: report.reviewRemarks,
+                reviewedAt: report.reviewedAt,
                 entries: sortedEntries,
             });
         });
@@ -298,6 +314,39 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
     const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({});
     const [selectedReportKey, setSelectedReportKey] = useState<string | null>(null);
     const [selectedReport, setSelectedReport] = useState<ReportGroup | null>(null);
+    const [reviewRemarks, setReviewRemarks] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleReview = (status: 'approved' | 'rejected') => {
+        if (!selectedReport) return;
+        setIsSubmitting(true);
+
+        router.patch(
+            SupervisorController.review(selectedReport.id).url,
+            {
+                review_status: status,
+                review_remarks: reviewRemarks,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(`Report ${status} successfully.`);
+                    setIsSubmitting(false);
+                    setSelectedReport(prev => prev ? {
+                        ...prev,
+                        reviewStatus: status,
+                        reviewRemarks: reviewRemarks,
+                        reviewedAt: new Date().toISOString()
+                    } : null);
+                    setReviewRemarks('');
+                },
+                onError: () => {
+                    setIsSubmitting(false);
+                    toast.error('Failed to submit review.');
+                },
+            }
+        );
+    };
 
     const selectOffice = (office: AssignedOffice) => {
         setSelectedOffice(office);
@@ -580,6 +629,95 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                             </div>
                                         ) : (
                                             <div className="overflow-hidden rounded-md border border-gray-200">
+                                                {/* Approval Panel */}
+                                                <div className="bg-white border-b border-gray-200 p-4">
+                                                    <div className="flex flex-col gap-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <h3 className="text-sm font-semibold text-gray-900">Review Status</h3>
+                                                                <div className="mt-1 flex items-center gap-2">
+                                                                    {selectedReport.reviewStatus === 'approved' && (
+                                                                        <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
+                                                                            <CheckCircle className="mr-1 h-3 w-3" />
+                                                                            Approved
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewStatus === 'rejected' && (
+                                                                        <Badge className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200">
+                                                                            <XCircle className="mr-1 h-3 w-3" />
+                                                                            Rejected
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewStatus === 'submitted' && (
+                                                                        <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
+                                                                            <Clock className="mr-1 h-3 w-3" />
+                                                                            Submitted — Awaiting Review
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewStatus === 'resubmitted' && (
+                                                                        <Badge variant="outline" className="text-violet-700 border-violet-200 bg-violet-50">
+                                                                            <Clock className="mr-1 h-3 w-3" />
+                                                                            Resubmitted — Awaiting Review
+                                                                        </Badge>
+                                                                    )}
+                                                                    {(!selectedReport.reviewStatus || selectedReport.reviewStatus === 'draft') && (
+                                                                        <Badge variant="outline" className="text-gray-600 border-gray-300 bg-gray-50">
+                                                                            Draft — Not Submitted
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewedAt && (
+                                                                        <span className="text-xs text-gray-500">
+                                                                            on {formatDate(selectedReport.reviewedAt.split('T')[0])}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {selectedReport.reviewRemarks ? (
+                                                            <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-700 border border-gray-100">
+                                                                <strong>Remarks:</strong> {selectedReport.reviewRemarks}
+                                                            </div>
+                                                        ) : null}
+
+                                                        {/* Show review controls for submitted/resubmitted/approved/rejected */}
+                                                        {selectedReport.reviewStatus && ['submitted', 'resubmitted', 'approved', 'rejected'].includes(selectedReport.reviewStatus) && (
+                                                            <div className="space-y-3 pt-2">
+                                                                <Textarea
+                                                                    placeholder="Add remarks (optional)..."
+                                                                    value={reviewRemarks}
+                                                                    onChange={(e) => setReviewRemarks(e.target.value)}
+                                                                    className="min-h-[80px] resize-none text-sm"
+                                                                />
+                                                                <div className="flex items-center gap-2">
+                                                                    {selectedReport.reviewStatus !== 'approved' && (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            onClick={() => handleReview('approved')}
+                                                                            disabled={isSubmitting}
+                                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                                        >
+                                                                            <CheckCircle className="mr-2 h-4 w-4" />
+                                                                            Approve
+                                                                        </Button>
+                                                                    )}
+                                                                    {selectedReport.reviewStatus !== 'rejected' && (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="destructive"
+                                                                            onClick={() => handleReview('rejected')}
+                                                                            disabled={isSubmitting}
+                                                                        >
+                                                                            <XCircle className="mr-2 h-4 w-4" />
+                                                                            Reject
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
                                                 <Table className="text-sm">
                                                     <TableHeader className="bg-gray-50">
                                                         <TableRow className="border-b border-gray-200">

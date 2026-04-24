@@ -17,10 +17,9 @@ export type Report = {
     startDate: string;
     endDate: string;
     entries: Record<string, ReportEntry>; // key = YYYY-MM-DD
-    office?: string;
-    position?: string;
-    reviewer?: string;
-    approver?: string;
+    reviewStatus?: 'draft' | 'submitted' | 'resubmitted' | 'approved' | 'rejected';
+    reviewRemarks?: string | null;
+    reviewedAt?: string | null;
 };
 
 type PrintData = {

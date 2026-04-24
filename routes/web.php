@@ -57,6 +57,9 @@ Route::middleware(['auth', 'verified', 'role:Employee'])->group(function () {
     Route::delete('/reports/{report}', [ReportController::class, 'destroy'])
         ->name('reports.destroy');
 
+    Route::patch('/reports/{report}/submit', [ReportController::class, 'submit'])
+        ->name('reports.submit');
+
 
     Route::patch('/report-entries/{entry}', [ReportEntryController::class, 'update'])
         ->name('report-entries.update');
@@ -69,6 +72,9 @@ Route::middleware(['auth', 'verified', 'role:Supervisor'])->group(function () {
 
     Route::get('/supervisor', [SupervisorController::class, 'index'])
         ->name('supervisor');
+
+    Route::patch('/supervisor/reports/{report}/review', [SupervisorController::class, 'review'])
+        ->name('supervisor.reports.review');
 });
 
 // Admin Routes - Protected

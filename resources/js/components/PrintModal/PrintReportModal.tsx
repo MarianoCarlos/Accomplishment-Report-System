@@ -77,9 +77,9 @@ export default function PrintReportModal({
         : '';
 
     const [selectedOffice, setSelectedOffice] = useState(autoAssignedOfficeName);
-    const [selectedPosition, setSelectedPosition] = useState((userPositionName || report?.position) ?? '');
-    const [selectedReviewer, setSelectedReviewer] = useState(report?.reviewer ?? '');
-    const [selectedApprover, setSelectedApprover] = useState(report?.approver ?? '');
+    const [selectedPosition, setSelectedPosition] = useState(userPositionName || '');
+    const [selectedReviewer, setSelectedReviewer] = useState('');
+    const [selectedApprover, setSelectedApprover] = useState('');
 
     // Search states for user selectors
     const [reviewerSearch, setReviewerSearch] = useState('');
@@ -141,7 +141,7 @@ export default function PrintReportModal({
 
     const resetFields = () => {
         setSelectedOffice(autoAssignedOfficeName);
-        setSelectedPosition((userPositionName || report?.position) ?? '');
+        setSelectedPosition(userPositionName || '');
         setSelectedReviewer('');
         setSelectedApprover('');
         setReviewerSearch('');

@@ -13,16 +13,17 @@ class Report extends Model
         'user_id',
         'start_date',
         'end_date',
-        'office',
-        'position',
-        'reviewer',
-        'approver',
+        'review_status',
+        'review_remarks',
+        'reviewed_by',
+        'reviewed_at',
         'is_archived',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'reviewed_at' => 'datetime',
         'is_archived' => 'boolean',
     ];
 
@@ -34,5 +35,10 @@ class Report extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function reviewedBy()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 }

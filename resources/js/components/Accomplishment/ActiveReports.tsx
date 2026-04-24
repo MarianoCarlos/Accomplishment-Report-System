@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ChevronDown, ChevronUp, Archive, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Archive, Plus, Trash2, CheckCircle, XCircle, Clock, Send, RefreshCw, FileEdit, AlertCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import * as ReportEntryController from '@/actions/App/Http/Controllers/ReportEnt
 import TiptapEditor from '@/components/Editor/TiptapEditor';
 import PrintReportModal from '@/components/PrintModal/PrintReportModal';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Card } from '@/components/ui/card';
 import {
@@ -284,6 +285,39 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                         )}
                                     </button>
 
+                                    <div className="mt-1 mb-2">
+                                        {report.reviewStatus === 'approved' && (
+                                            <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
+                                                <CheckCircle className="mr-1 h-3 w-3" />
+                                                Approved
+                                            </Badge>
+                                        )}
+                                        {report.reviewStatus === 'rejected' && (
+                                            <Badge className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200">
+                                                <XCircle className="mr-1 h-3 w-3" />
+                                                Rejected
+                                            </Badge>
+                                        )}
+                                        {report.reviewStatus === 'submitted' && (
+                                            <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
+                                                <Send className="mr-1 h-3 w-3" />
+                                                Submitted
+                                            </Badge>
+                                        )}
+                                        {report.reviewStatus === 'resubmitted' && (
+                                            <Badge variant="outline" className="text-violet-700 border-violet-200 bg-violet-50">
+                                                <RefreshCw className="mr-1 h-3 w-3" />
+                                                Resubmitted
+                                            </Badge>
+                                        )}
+                                        {(!report.reviewStatus || report.reviewStatus === 'draft') && (
+                                            <Badge variant="outline" className="text-gray-600 border-gray-300 bg-gray-50">
+                                                <FileEdit className="mr-1 h-3 w-3" />
+                                                Draft
+                                            </Badge>
+                                        )}
+                                    </div>
+
                                     <div className="mt-2 flex items-center justify-between">
                                         <span className="text-xs text-muted-foreground">
                                             {completed}/{total} days completed
@@ -320,83 +354,176 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                 )}
 
                 {/* Expanded editor */}
-                {expandedReport && (
-                    <Card className="mt-4 border border-border p-6">
-                        <div className="mb-4">
-                            <h2 className="text-lg font-semibold">
-                                {format(
-                                    new Date(expandedReport.startDate + 'T00:00:00'),
-                                    'MMM dd',
-                                )}{' '}
-                                –{' '}
-                                {format(
-                                    new Date(expandedReport.endDate + 'T00:00:00'),
-                                    'MMM dd, yyyy',
+                {expandedReport && (() => {
+                    const status = expandedReport.reviewStatus ?? 'draft';
+                    const isEditable = status === 'draft' || status === 'rejected';
+                    const isLocked = !isEditable;
+
+                    return (
+                        <Card className="mt-4 border border-border p-6">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h2 className="text-lg font-semibold">
+                                    {format(
+                                        new Date(expandedReport.startDate + 'T00:00:00'),
+                                        'MMM dd',
+                                    )}{' '}
+                                    –{' '}
+                                    {format(
+                                        new Date(expandedReport.endDate + 'T00:00:00'),
+                                        'MMM dd, yyyy',
+                                    )}
+                                </h2>
+                                {isLocked && (
+                                    <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
+                                        Read Only
+                                    </Badge>
                                 )}
-                            </h2>
-                        </div>
+                            </div>
 
-                        <div className="space-y-6">
-                            {expandedDays.map((date) => {
-                                const key = format(date, 'yyyy-MM-dd');
-                                const entry = expandedReport.entries[key];
-
-                                return (
-                                    <div
-                                        key={key}
-                                        className="flex items-start gap-6"
-                                    >
-                                        {/* Left Date Column */}
-                                        <div className="flex w-24 flex-col items-center pt-3">
-                                            <span className="text-xs tracking-wide text-muted-foreground uppercase">
-                                                {format(date, 'EEE')}
-                                            </span>
-                                            <span className="text-sm font-semibold">
-                                                {format(date, 'dd')}
-                                            </span>
-                                        </div>
-
-                                        {/* Right Editor */}
-                                        <div className="flex-1">
-                                            <TiptapEditor
-                                                value={entry?.content ?? ''}
-                                                onChange={(value) => {
-                                                    if (entry) {
-                                                        updateEntry(
-                                                            entry.id,
-                                                            value,
-                                                        );
-                                                    }
-                                                }}
-                                            />
-                                        </div>
+                            {/* Remarks banner (inside the report) */}
+                            {expandedReport.reviewRemarks && (
+                                <div className={`mb-4 flex items-start gap-3 rounded-lg border p-3 text-sm ${
+                                    status === 'rejected'
+                                        ? 'border-red-200 bg-red-50 text-red-800'
+                                        : 'border-amber-200 bg-amber-50 text-amber-800'
+                                }`}>
+                                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                                    <div>
+                                        <p className="font-semibold">Supervisor Remarks</p>
+                                        <p className="mt-0.5">{expandedReport.reviewRemarks}</p>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </div>
+                            )}
 
-                        {/* Footer actions */}
-                        <div className="mt-6 flex justify-end gap-2 print:hidden">
-                            <Button
-                                variant="success"
-                                onClick={() => {
-                                    setExpandedId(null);
-                                    toast.success('Draft saved successfully.');
-                                }}
-                            >
-                                Save as Draft
-                            </Button>
+                            <div className="space-y-6">
+                                {expandedDays.map((date) => {
+                                    const key = format(date, 'yyyy-MM-dd');
+                                    const entry = expandedReport.entries[key];
 
-                            <Button
-                                onClick={() => {
-                                    setIsPrintModalOpen(true);
-                                }}
-                            >
-                                Print
-                            </Button>
-                        </div>
-                    </Card>
-                )}
+                                    return (
+                                        <div
+                                            key={key}
+                                            className="flex items-start gap-6"
+                                        >
+                                            {/* Left Date Column */}
+                                            <div className="flex w-24 flex-col items-center pt-3">
+                                                <span className="text-xs tracking-wide text-muted-foreground uppercase">
+                                                    {format(date, 'EEE')}
+                                                </span>
+                                                <span className="text-sm font-semibold">
+                                                    {format(date, 'dd')}
+                                                </span>
+                                            </div>
+
+                                            {/* Right Editor */}
+                                            <div className="flex-1">
+                                                {isLocked ? (
+                                                    <div className="min-h-[60px] rounded-md border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-700">
+                                                        {entry?.content ? (
+                                                            <div dangerouslySetInnerHTML={{ __html: entry.content }} />
+                                                        ) : (
+                                                            <span className="text-muted-foreground italic">No entry</span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <TiptapEditor
+                                                        value={entry?.content ?? ''}
+                                                        onChange={(value) => {
+                                                            if (entry) {
+                                                                updateEntry(
+                                                                    entry.id,
+                                                                    value,
+                                                                );
+                                                            }
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Footer actions */}
+                            <div className="mt-6 flex justify-between print:hidden">
+                                <div className="flex gap-2">
+                                    {status === 'draft' && (
+                                        <>
+                                            <Button
+                                                variant="success"
+                                                onClick={() => {
+                                                    setExpandedId(null);
+                                                    toast.success('Draft saved successfully.');
+                                                }}
+                                            >
+                                                Save as Draft
+                                            </Button>
+                                            <Button
+                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                onClick={() => {
+                                                    router.patch(
+                                                        ReportController.submit(expandedReport.id).url,
+                                                        {},
+                                                        {
+                                                            preserveScroll: true,
+                                                            onSuccess: () => {
+                                                                setExpandedId(null);
+                                                                toast.success('Report submitted for review.');
+                                                            },
+                                                        }
+                                                    );
+                                                }}
+                                            >
+                                                <Send className="mr-2 h-4 w-4" />
+                                                Submit
+                                            </Button>
+                                        </>
+                                    )}
+                                    {status === 'rejected' && (
+                                        <>
+                                            <Button
+                                                variant="success"
+                                                onClick={() => {
+                                                    setExpandedId(null);
+                                                    toast.success('Draft saved successfully.');
+                                                }}
+                                            >
+                                                Save as Draft
+                                            </Button>
+                                            <Button
+                                                className="bg-violet-600 hover:bg-violet-700 text-white"
+                                                onClick={() => {
+                                                    router.patch(
+                                                        ReportController.submit(expandedReport.id).url,
+                                                        {},
+                                                        {
+                                                            preserveScroll: true,
+                                                            onSuccess: () => {
+                                                                setExpandedId(null);
+                                                                toast.success('Report resubmitted for review.');
+                                                            },
+                                                        }
+                                                    );
+                                                }}
+                                            >
+                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                Resubmit
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+
+                                <Button
+                                    onClick={() => {
+                                        setIsPrintModalOpen(true);
+                                    }}
+                                >
+                                    Print
+                                </Button>
+                            </div>
+                        </Card>
+                    );
+                })()}
 
                 <PrintReportModal
                     key={`${expandedReport?.id ?? 'none'}-${isPrintModalOpen}`}

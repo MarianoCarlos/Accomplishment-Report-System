@@ -21,7 +21,7 @@ class AdminReportViewController extends Controller
                     ->with([
                         'position:id,name',
                         'reports' => fn ($reportQuery) => $reportQuery
-                            ->select(['id', 'user_id', 'start_date', 'end_date'])
+                            ->select(['id', 'user_id', 'start_date', 'end_date', 'review_status', 'review_remarks', 'reviewed_at'])
                             ->orderByDesc('start_date')
                             ->with([
                                 'entries' => fn ($entryQuery) => $entryQuery
@@ -44,6 +44,9 @@ class AdminReportViewController extends Controller
                             'id'        => $report->id,
                             'startDate' => $report->start_date?->toDateString(),
                             'endDate'   => $report->end_date?->toDateString(),
+                            'reviewStatus' => $report->review_status ?? 'draft',
+                            'reviewRemarks' => $report->review_remarks,
+                            'reviewedAt' => $report->reviewed_at?->toIso8601String(),
                             'entries'   => $report->entries
                                 ->map(fn ($entry) => [
                                     'id'      => $entry->id,

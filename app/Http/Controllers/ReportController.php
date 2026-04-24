@@ -57,6 +57,7 @@ class ReportController extends Controller
             'user_id' => auth()->id(),
             'start_date' => $start,
             'end_date' => $end,
+            'review_status' => 'draft',
         ]);
 
         $current = Carbon::parse($start);
@@ -97,6 +98,21 @@ class ReportController extends Controller
         return back();
     }
 
+    public function submit(Report $report)
+    {
+        abort_unless($report->user_id === auth()->id(), 403);
+        abort_unless(in_array($report->review_status, ['draft', 'rejected']), 422, 'This report cannot be submitted.');
+
+        $report->update([
+            'review_status' => $report->review_status === 'rejected' ? 'resubmitted' : 'submitted',
+            'review_remarks' => null,
+            'reviewed_by' => null,
+            'reviewed_at' => null,
+        ]);
+
+        return back()->with('success', 'Report submitted for review.');
+    }
+
 
     private function transformReports($reports)
     {
@@ -105,6 +121,9 @@ class ReportController extends Controller
                 'id' => $report->id,
                 'startDate' => $report->start_date->format('Y-m-d'),
                 'endDate' => $report->end_date->format('Y-m-d'),
+                'reviewStatus' => $report->review_status ?? 'draft',
+                'reviewRemarks' => $report->review_remarks,
+                'reviewedAt' => $report->reviewed_at?->toIso8601String(),
                 'entries' => $report->entries->mapWithKeys(function ($entry) {
                     return [
                         $entry->entry_date->format('Y-m-d') => [

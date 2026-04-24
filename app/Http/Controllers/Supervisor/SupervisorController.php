@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Supervisor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Office;
+use App\Models\Report;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -59,6 +61,9 @@ class SupervisorController extends Controller
                             'id' => $report->id,
                             'startDate' => $report->start_date?->toDateString(),
                             'endDate' => $report->end_date?->toDateString(),
+                            'reviewStatus' => $report->review_status,
+                            'reviewRemarks' => $report->review_remarks,
+                            'reviewedAt' => $report->reviewed_at?->toIso8601String(),
                             'entries' => $report->entries
                                 ->map(fn ($entry) => [
                                     'id' => $entry->id,
@@ -82,6 +87,42 @@ class SupervisorController extends Controller
         ]);
     }
 
+    public function review(Request $request, Report $report)
+    {
+        $validated = $request->validate([
+            'review_status' => 'required|in:approved,rejected',
+            'review_remarks' => 'nullable|string|max:1000',
+        ]);
+
+        // Guard: only submitted/resubmitted/approved/rejected reports can be reviewed
+        abort_unless(
+            in_array($report->review_status, ['submitted', 'resubmitted', 'approved', 'rejected']),
+            422,
+            'This report is not available for review.'
+        );
+
+        // Authorization check: Ensure the supervisor oversees the report owner's office
+        $supervisorId = auth()->id();
+        $isAuthorized = Office::query()
+            ->where('id', $report->user->office_id)
+            ->where(function ($query) use ($supervisorId) {
+                $query->where('supervisor_id', $supervisorId)
+                      ->orWhere('alternate_supervisor_id', $supervisorId);
+            })
+            ->exists();
+
+        abort_unless($isAuthorized, 403, 'Unauthorized to review this report.');
+
+        $report->update([
+            'review_status' => $validated['review_status'],
+            'review_remarks' => $validated['review_remarks'],
+            'reviewed_by' => $supervisorId,
+            'reviewed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Report review submitted successfully.');
+    }
+
     private function loadAssignedOffices()
     {
         return Office::query()
@@ -96,7 +137,7 @@ class SupervisorController extends Controller
                     ->with([
                         'position:id,name',
                         'reports' => fn ($reportQuery) => $reportQuery
-                            ->select(['id', 'user_id', 'start_date', 'end_date'])
+                            ->select(['id', 'user_id', 'start_date', 'end_date', 'review_status', 'review_remarks', 'reviewed_at'])
                             ->orderByDesc('start_date')
                             ->with([
                                 'entries' => fn ($entryQuery) => $entryQuery
