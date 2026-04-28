@@ -113,6 +113,18 @@ class ReportController extends Controller
         return back()->with('success', 'Report submitted for review.');
     }
 
+    public function unsubmit(Report $report)
+    {
+        abort_unless($report->user_id === auth()->id(), 403);
+        abort_unless(in_array($report->review_status, ['submitted', 'resubmitted']), 422, 'This report cannot be unsubmitted.');
+
+        $report->update([
+            'review_status' => 'draft',
+        ]);
+
+        return back()->with('success', 'Report unsubmitted and returned to draft.');
+    }
+
 
     private function transformReports($reports)
     {

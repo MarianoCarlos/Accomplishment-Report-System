@@ -22,6 +22,8 @@ class AdminReportViewController extends Controller
                         'position:id,name',
                         'reports' => fn ($reportQuery) => $reportQuery
                             ->select(['id', 'user_id', 'start_date', 'end_date', 'review_status', 'review_remarks', 'reviewed_at'])
+                            ->whereNotNull('review_status')
+                            ->where('review_status', '!=', 'draft')
                             ->orderByDesc('start_date')
                             ->with([
                                 'entries' => fn ($entryQuery) => $entryQuery

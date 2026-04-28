@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Report } from '@/pages/user/accomplishment-report';
+
 
 interface Office {
     id: number;
@@ -44,7 +44,6 @@ type PageProps = {
 type Props = {
     isOpen: boolean;
     onClose: () => void;
-    report: Report | null;
     offices: Office[];
     positions: Position[];
     users: User[];
@@ -59,7 +58,6 @@ type Props = {
 export default function PrintReportModal({
     isOpen,
     onClose,
-    report,
     offices,
     positions,
     users,

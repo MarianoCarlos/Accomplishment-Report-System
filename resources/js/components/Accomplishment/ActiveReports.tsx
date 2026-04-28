@@ -1,15 +1,16 @@
 import { router } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ChevronDown, ChevronUp, Archive, Plus, Trash2, CheckCircle, XCircle, Clock, Send, RefreshCw, FileEdit, AlertCircle } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronUp, Archive, Plus, Trash2, Send, RefreshCw, AlertCircle, Undo, CheckCircle } from 'lucide-react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
 import * as ReportController from '@/actions/App/Http/Controllers/ReportController';
 import * as ReportEntryController from '@/actions/App/Http/Controllers/ReportEntryController';
+import ReportStatusBadge from '@/components/Accomplishment/ReportStatusBadge';
 import TiptapEditor from '@/components/Editor/TiptapEditor';
 import PrintReportModal from '@/components/PrintModal/PrintReportModal';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card } from '@/components/ui/card';
 import {
@@ -52,11 +53,9 @@ function generateDays(start: string, end: string) {
     return days;
 }
 
-function isDateInRange(date: Date, start: string, end: string) {
+function isDateInRange(date: Date, start: Date, end: Date) {
     const d = normalize(date);
-    const s = new Date(start + 'T00:00:00');
-    const e = new Date(end + 'T00:00:00');
-    return d >= s && d <= e;
+    return d >= start && d <= end;
 }
 
 function countCompletedDays(report: Report) {
@@ -100,19 +99,61 @@ export default function ActiveReports({ reports, setPrintData, offices, position
     const [range, setRange] = useState<DateRange | undefined>();
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [reportToDelete, setReportToDelete] = useState<number | null>(null);
+    const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved'>('idle');
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const expandReport = (id: number | null) => {
+        setExpandedId(id);
+        setSavingState('idle');
+        setLastSaved(null);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
 
     const updateEntry = (entryId: number, value: string) => {
-        router.patch(
-            ReportEntryController.update(entryId).url,
-            { content: value },
-            { preserveScroll: true },
-        );
+        setSavingState('saving');
+        
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(() => {
+            router.patch(
+                ReportEntryController.update(entryId).url,
+                { content: value },
+                { 
+                    preserveState: true,
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        setSavingState('saved');
+                        setLastSaved(new Date());
+                    },
+                    onError: () => setSavingState('idle'),
+                },
+            );
+        }, 1000);
     };
+
+    const parsedReports = useMemo(
+        () => reports.map(r => ({
+            start: new Date(r.startDate + 'T00:00:00'),
+            end: new Date(r.endDate + 'T00:00:00')
+        })),
+        [reports]
+    );
 
     const disabledDates = useMemo(
         () => (date: Date) =>
-            reports.some((r) => isDateInRange(date, r.startDate, r.endDate)),
-        [reports],
+            parsedReports.some((r) => isDateInRange(date, r.start, r.end)),
+        [parsedReports],
     );
 
     const addReport = () => {
@@ -142,7 +183,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    setExpandedId(null);
+                    expandReport(null);
                     toast.success('Report archived successfully.');
                 },
             },
@@ -155,7 +196,8 @@ export default function ActiveReports({ reports, setPrintData, offices, position
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    setExpandedId(null);
+                    expandReport(null);
+                    setReportToDelete(null);
                     toast.success('Report deleted permanently.');
                 },
             },
@@ -261,7 +303,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                     <button
                                         disabled={isDisabled}
                                         onClick={() =>
-                                            setExpandedId(
+                                            expandReport(
                                                 expanded ? null : report.id,
                                             )
                                         }
@@ -286,36 +328,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                     </button>
 
                                     <div className="mt-1 mb-2">
-                                        {report.reviewStatus === 'approved' && (
-                                            <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
-                                                <CheckCircle className="mr-1 h-3 w-3" />
-                                                Approved
-                                            </Badge>
-                                        )}
-                                        {report.reviewStatus === 'rejected' && (
-                                            <Badge className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200">
-                                                <XCircle className="mr-1 h-3 w-3" />
-                                                Rejected
-                                            </Badge>
-                                        )}
-                                        {report.reviewStatus === 'submitted' && (
-                                            <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
-                                                <Send className="mr-1 h-3 w-3" />
-                                                Submitted
-                                            </Badge>
-                                        )}
-                                        {report.reviewStatus === 'resubmitted' && (
-                                            <Badge variant="outline" className="text-violet-700 border-violet-200 bg-violet-50">
-                                                <RefreshCw className="mr-1 h-3 w-3" />
-                                                Resubmitted
-                                            </Badge>
-                                        )}
-                                        {(!report.reviewStatus || report.reviewStatus === 'draft') && (
-                                            <Badge variant="outline" className="text-gray-600 border-gray-300 bg-gray-50">
-                                                <FileEdit className="mr-1 h-3 w-3" />
-                                                Draft
-                                            </Badge>
-                                        )}
+                                        <ReportStatusBadge status={report.reviewStatus} />
                                     </div>
 
                                     <div className="mt-2 flex items-center justify-between">
@@ -373,10 +386,23 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                         'MMM dd, yyyy',
                                     )}
                                 </h2>
-                                {isLocked && (
+                                {isLocked ? (
                                     <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
                                         Read Only
                                     </Badge>
+                                ) : (
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                        {savingState === 'saving' && (
+                                            <span className="flex items-center gap-1.5 text-blue-600">
+                                                <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Auto-saving...
+                                            </span>
+                                        )}
+                                        {savingState === 'saved' && lastSaved && (
+                                            <span className="flex items-center gap-1.5 text-emerald-600">
+                                                <CheckCircle className="h-3.5 w-3.5" /> Saved at {format(lastSaved, 'h:mm a')}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
@@ -450,13 +476,11 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                     {status === 'draft' && (
                                         <>
                                             <Button
-                                                variant="success"
-                                                onClick={() => {
-                                                    setExpandedId(null);
-                                                    toast.success('Draft saved successfully.');
-                                                }}
+                                                variant="outline"
+                                                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                                onClick={() => expandReport(null)}
                                             >
-                                                Save as Draft
+                                                Done Editing
                                             </Button>
                                             <Button
                                                 className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -467,7 +491,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                                         {
                                                             preserveScroll: true,
                                                             onSuccess: () => {
-                                                                setExpandedId(null);
+                                                                expandReport(null);
                                                                 toast.success('Report submitted for review.');
                                                             },
                                                         }
@@ -482,13 +506,11 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                     {status === 'rejected' && (
                                         <>
                                             <Button
-                                                variant="success"
-                                                onClick={() => {
-                                                    setExpandedId(null);
-                                                    toast.success('Draft saved successfully.');
-                                                }}
+                                                variant="outline"
+                                                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                                onClick={() => expandReport(null)}
                                             >
-                                                Save as Draft
+                                                Done Editing
                                             </Button>
                                             <Button
                                                 className="bg-violet-600 hover:bg-violet-700 text-white"
@@ -499,7 +521,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                                         {
                                                             preserveScroll: true,
                                                             onSuccess: () => {
-                                                                setExpandedId(null);
+                                                                expandReport(null);
                                                                 toast.success('Report resubmitted for review.');
                                                             },
                                                         }
@@ -510,6 +532,28 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                                                 Resubmit
                                             </Button>
                                         </>
+                                    )}
+                                    {(status === 'submitted' || status === 'resubmitted') && (
+                                        <Button
+                                            variant="outline"
+                                            className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                                            onClick={() => {
+                                                router.patch(
+                                                    ReportController.unsubmit(expandedReport.id).url,
+                                                    {},
+                                                    {
+                                                        preserveScroll: true,
+                                                        onSuccess: () => {
+                                                            expandReport(null);
+                                                            toast.success('Report unsubmitted and returned to draft.');
+                                                        },
+                                                    }
+                                                );
+                                            }}
+                                        >
+                                            <Undo className="mr-2 h-4 w-4" />
+                                            Unsubmit
+                                        </Button>
                                     )}
                                 </div>
 
@@ -529,7 +573,6 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                     key={`${expandedReport?.id ?? 'none'}-${isPrintModalOpen}`}
                     isOpen={isPrintModalOpen}
                     onClose={() => setIsPrintModalOpen(false)}
-                    report={expandedReport ?? null}
                     offices={offices}
                     positions={positions}
                     users={users}
@@ -548,7 +591,7 @@ export default function ActiveReports({ reports, setPrintData, offices, position
 
                         setTimeout(() => {
                             window.print();
-                            setExpandedId(null);
+                            expandReport(null);
                         }, 200);
                     }}
                 />
@@ -570,7 +613,6 @@ export default function ActiveReports({ reports, setPrintData, offices, position
                         <Button variant="destructive" onClick={() => {
                             if (reportToDelete) {
                                 deleteReport(reportToDelete);
-                                setReportToDelete(null);
                             }
                         }}>Delete</Button>
                     </DialogFooter>

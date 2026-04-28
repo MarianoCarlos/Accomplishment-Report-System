@@ -60,6 +60,9 @@ Route::middleware(['auth', 'verified', 'role:Employee'])->group(function () {
     Route::patch('/reports/{report}/submit', [ReportController::class, 'submit'])
         ->name('reports.submit');
 
+    Route::patch('/reports/{report}/unsubmit', [ReportController::class, 'unsubmit'])
+        ->name('reports.unsubmit');
+
 
     Route::patch('/report-entries/{entry}', [ReportEntryController::class, 'update'])
         ->name('report-entries.update');

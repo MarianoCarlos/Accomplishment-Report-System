@@ -2,15 +2,15 @@ import { Head, router } from '@inertiajs/react';
 import DOMPurify from 'dompurify';
 import { ArrowLeft, Building2, CalendarDays, ChevronRight, FileText, Folder, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import * as SupervisorController from '@/actions/App/Http/Controllers/Supervisor/SupervisorController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
 import AppLayout from '@/layouts/app-layout';
-import * as SupervisorController from '@/actions/App/Http/Controllers/Supervisor/SupervisorController';
 import { supervisor as supervisorRoute } from '@/routes';
 import { dashboard as supervisorDashboard } from '@/routes/supervisor';
 import type { BreadcrumbItem, SharedData } from '@/types';
@@ -582,7 +582,7 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                                         return (
                                                                             <button
                                                                                 key={reportStateKey}
-                                                                                className={`flex w-full items-center justify-start rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                                                                                className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors ${
                                                                                     isSelected
                                                                                         ? 'border-blue-200 bg-blue-50 text-blue-700'
                                                                                         : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
@@ -593,10 +593,26 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                                                     setSelectedReport(reportGroup);
                                                                                 }}
                                                                             >
-                                                                                <span className="flex items-center gap-2">
-                                                                                    <FileText className="h-4 w-4" />
-                                                                                    {reportGroup.label}
+                                                                                <span className="flex items-center gap-2 overflow-hidden">
+                                                                                    <FileText className="h-4 w-4 shrink-0" />
+                                                                                    <span className="truncate">{reportGroup.label}</span>
                                                                                 </span>
+                                                                                
+                                                                                {reportGroup.reviewStatus === 'approved' && (
+                                                                                    <span title="Approved" className="flex shrink-0 items-center justify-center">
+                                                                                        <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                                                                    </span>
+                                                                                )}
+                                                                                {reportGroup.reviewStatus === 'rejected' && (
+                                                                                    <span title="Rejected" className="flex shrink-0 items-center justify-center">
+                                                                                        <XCircle className="h-4 w-4 text-red-500" />
+                                                                                    </span>
+                                                                                )}
+                                                                                {(reportGroup.reviewStatus === 'submitted' || reportGroup.reviewStatus === 'resubmitted') && (
+                                                                                    <span title="Pending Review" className="flex shrink-0 items-center justify-center">
+                                                                                        <Clock className="h-4 w-4 text-blue-500" />
+                                                                                    </span>
+                                                                                )}
                                                                             </button>
                                                                         );
                                                                     })}
