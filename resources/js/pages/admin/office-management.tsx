@@ -27,6 +27,7 @@ interface User {
     name: string;
     email: string;
     role: string;
+    roles: string[];
     position_id?: number;
     office_id?: number;
 }

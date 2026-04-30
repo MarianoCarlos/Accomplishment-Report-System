@@ -19,7 +19,17 @@ class CheckRole
             return redirect()->route('login');
         }
 
-        if (in_array(auth()->user()->role, $roles)) {
+        $user = auth()->user();
+        $activeRole = session('active_role', $user->role);
+
+        // Ensure active role is actually one the user has been assigned
+        $userRoles = $user->roles ?? [$user->role];
+        if (!in_array($activeRole, $userRoles)) {
+            $activeRole = $user->role;
+            session(['active_role' => $activeRole]);
+        }
+
+        if (in_array($activeRole, $roles)) {
             return $next($request);
         }
 

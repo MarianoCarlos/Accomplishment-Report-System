@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'roles',
         'position_id',
         'office_id',
     ];
@@ -61,6 +62,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the available roles for the user based on their assigned roles.
+     * This powers the role-switcher feature.
+     */
+    public function getAvailableRolesAttribute()
+    {
+        return $this->roles ?? [$this->role];
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -71,6 +81,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'roles' => 'array',
         ];
     }
 }
