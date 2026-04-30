@@ -1,12 +1,15 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import DOMPurify from 'dompurify';
-import { ArrowLeft, Building2, CalendarDays, ChevronRight, FileText, Folder, Users, UserCheck, UserCog } from 'lucide-react';
+import { ArrowLeft, Building2, CalendarDays, ChevronRight, FileText, Folder, Users, UserCheck, UserCog, CheckCircle, XCircle, Clock, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { adminDashboard } from '@/routes';
 import { officeReport } from '@/routes/admin';
@@ -29,6 +32,9 @@ interface MemberReport {
     id: number;
     startDate: string | null;
     endDate: string | null;
+    reviewStatus?: 'draft' | 'submitted' | 'resubmitted' | 'approved' | 'rejected';
+    reviewRemarks?: string | null;
+    reviewedAt?: string | null;
     entries: ReportEntry[];
 }
 
@@ -54,6 +60,9 @@ interface ReportGroup {
     startDate: string | null;
     endDate: string | null;
     latestDate: string | null;
+    reviewStatus?: 'draft' | 'submitted' | 'resubmitted' | 'approved' | 'rejected';
+    reviewRemarks?: string | null;
+    reviewedAt?: string | null;
     entries: ReportEntry[];
 }
 
@@ -101,6 +110,13 @@ function compareDateDesc(left: string | null, right: string | null) {
     if (!left) return 1;
     if (!right) return -1;
     return right.localeCompare(left);
+}
+
+function compareDateAsc(left: string | null, right: string | null) {
+    if (left === right) return 0;
+    if (!left) return 1;
+    if (!right) return -1;
+    return left.localeCompare(right);
 }
 
 function getDateParts(value: string | null) {
@@ -163,6 +179,9 @@ function buildYearGroups(member: OfficeMember | null): YearGroup[] {
                 startDate: report.startDate,
                 endDate: report.endDate,
                 latestDate: report.endDate ?? report.startDate,
+                reviewStatus: report.reviewStatus,
+                reviewRemarks: report.reviewRemarks,
+                reviewedAt: report.reviewedAt,
                 entries: [],
             });
             return;
@@ -170,13 +189,16 @@ function buildYearGroups(member: OfficeMember | null): YearGroup[] {
 
         entriesByMonth.forEach((entries, bucketKey) => {
             const [yearKey, monthKey] = bucketKey.split('-');
-            const sortedEntries = [...entries].sort((a, b) => compareDateDesc(a.date, b.date));
+            const sortedEntries = [...entries].sort((a, b) => compareDateAsc(a.date, b.date));
             pushToBucket(yearKey, monthKey, {
                 id: report.id,
                 label: getReportLabel(report),
                 startDate: report.startDate,
                 endDate: report.endDate,
                 latestDate: sortedEntries[0]?.date ?? null,
+                reviewStatus: report.reviewStatus,
+                reviewRemarks: report.reviewRemarks,
+                reviewedAt: report.reviewedAt,
                 entries: sortedEntries,
             });
         });
@@ -224,11 +246,45 @@ function buildOpenStates(groups: YearGroup[]) {
 
 export default function AdminReportView({ offices }: Props) {
     const [selectedOffice, setSelectedOffice] = useState<Office | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const [selectedMember, setSelectedMember] = useState<OfficeMember | null>(null);
     const [openYears, setOpenYears] = useState<Record<string, boolean>>({});
     const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({});
     const [selectedReportKey, setSelectedReportKey] = useState<string | null>(null);
     const [selectedReport, setSelectedReport] = useState<ReportGroup | null>(null);
+    const [reviewRemarks, setReviewRemarks] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleReview = (status: 'approved' | 'rejected') => {
+        if (!selectedReport) return;
+        setIsSubmitting(true);
+
+        router.patch(
+            `/admin/reports/${selectedReport.id}/review`,
+            {
+                review_status: status,
+                review_remarks: reviewRemarks,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(`Report ${status} successfully.`);
+                    setIsSubmitting(false);
+                    setSelectedReport(prev => prev ? {
+                        ...prev,
+                        reviewStatus: status,
+                        reviewRemarks: reviewRemarks,
+                        reviewedAt: new Date().toISOString()
+                    } : null);
+                    setReviewRemarks('');
+                },
+                onError: () => {
+                    setIsSubmitting(false);
+                    toast.error('Failed to submit review.');
+                },
+            }
+        );
+    };
 
     const selectOffice = (office: Office) => {
         setSelectedOffice(office);
@@ -236,6 +292,12 @@ export default function AdminReportView({ offices }: Props) {
         setSelectedReportKey(null);
         setSelectedReport(null);
     };
+
+    const filteredOffices = useMemo(() => {
+        if (!searchQuery.trim()) return offices;
+        const query = searchQuery.toLowerCase();
+        return offices.filter((office) => office.name.toLowerCase().includes(query));
+    }, [offices, searchQuery]);
 
     const backToOffices = () => {
         setSelectedOffice(null);
@@ -274,27 +336,54 @@ export default function AdminReportView({ offices }: Props) {
                 {/* ── View 1: Office cards ── */}
                 {selectedOffice === null && (
                     <>
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Report View</h1>
-                            <p className="mt-1 text-sm text-gray-500">
-                                Browse all offices and view employee accomplishment reports.
-                            </p>
+                        <div className="flex flex-col gap-4">
+                            <div>
+                                <h1 className="text-2xl font-bold tracking-tight text-gray-900">Report View</h1>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Browse all offices and view employee accomplishment reports.
+                                </p>
+                            </div>
+                            <div className="relative w-full max-w-md">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                                <Input
+                                    type="text"
+                                    placeholder="Search offices..."
+                                    className="pl-9 bg-white"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {offices.map((office) => (
+                            {filteredOffices.map((office) => {
+                                const pendingCount = office.members.reduce((count, member) => {
+                                    return count + member.reports.filter(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted').length;
+                                }, 0);
+
+                                return (
                                 <Card
                                     key={office.id}
                                     className="cursor-pointer transition-shadow hover:shadow-md"
                                     onClick={() => selectOffice(office)}
                                 >
                                     <CardHeader className="pb-2">
-                                        <div className="flex items-center gap-3">
-                                            <span className="rounded-lg bg-indigo-50 p-2">
-                                                <Building2 className="h-5 w-5 text-indigo-600" />
-                                            </span>
-                                            <CardTitle className="text-base font-semibold">
-                                                {office.name}
-                                            </CardTitle>
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="rounded-lg bg-indigo-50 p-2">
+                                                    <Building2 className="h-5 w-5 text-indigo-600" />
+                                                </span>
+                                                <CardTitle className="text-base font-semibold">
+                                                    {office.name}
+                                                </CardTitle>
+                                            </div>
+                                            {pendingCount > 0 && (
+                                                <span title={`${pendingCount} pending review${pendingCount > 1 ? 's' : ''}`} className="flex shrink-0 items-center justify-center mt-1">
+                                                    <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                        <Clock className="h-3 w-3" />
+                                                        {pendingCount}
+                                                    </div>
+                                                </span>
+                                            )}
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-3">
@@ -330,13 +419,13 @@ export default function AdminReportView({ offices }: Props) {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))}
+                            )})}
                         </div>
 
-                        {offices.length === 0 && (
+                        {filteredOffices.length === 0 && (
                             <Card>
                                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                                    No offices found in the system.
+                                    {searchQuery ? 'No offices match your search.' : 'No offices found in the system.'}
                                 </CardContent>
                             </Card>
                         )}
@@ -373,7 +462,9 @@ export default function AdminReportView({ offices }: Props) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {selectedOffice.members.map((member, index) => (
+                                    {selectedOffice.members.map((member, index) => {
+                                        const pendingCount = member.reports.filter(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted').length;
+                                        return (
                                         <TableRow
                                             key={member.id}
                                             className={`cursor-pointer border-b border-gray-100 transition-colors last:border-0 hover:bg-blue-50 ${
@@ -383,9 +474,24 @@ export default function AdminReportView({ offices }: Props) {
                                         >
                                             <TableCell className="h-12 font-medium text-gray-900">{member.name}</TableCell>
                                             <TableCell className="h-12 text-gray-500">{member.email}</TableCell>
-                                            <TableCell className="h-12 text-gray-600">{member.position}</TableCell>
+                                            <TableCell className="h-12 text-gray-600">
+                                                <div className="flex items-center justify-between">
+                                                    <span>{member.position}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        {pendingCount > 0 && (
+                                                            <span title={`${pendingCount} pending review${pendingCount > 1 ? 's' : ''}`}>
+                                                                <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {pendingCount}
+                                                                </div>
+                                                            </span>
+                                                        )}
+                                                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )})}
 
                                     {selectedOffice.members.length === 0 && (
                                         <TableRow>
@@ -425,7 +531,12 @@ export default function AdminReportView({ offices }: Props) {
                                     <div className="py-8 text-center text-sm text-gray-500">No reports available.</div>
                                 ) : (
                                     <div className="space-y-3 lg:max-h-[calc(100vh-18rem)] lg:overflow-y-auto lg:pr-1">
-                                        {groupedByYear.map((yearGroup) => (
+                                        {groupedByYear.map((yearGroup) => {
+                                            const pendingCount = yearGroup.months.reduce((count, monthGroup) => {
+                                                return count + monthGroup.reports.filter(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted').length;
+                                            }, 0);
+
+                                            return (
                                             <Collapsible
                                                 key={yearGroup.key}
                                                 open={openYears[yearGroup.key] ?? false}
@@ -438,7 +549,7 @@ export default function AdminReportView({ offices }: Props) {
                                             >
                                                 <CollapsibleTrigger asChild>
                                                     <button
-                                                        className="flex w-full items-center justify-start rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left"
+                                                        className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left"
                                                         type="button"
                                                     >
                                                         <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
@@ -448,6 +559,14 @@ export default function AdminReportView({ offices }: Props) {
                                                             <Folder className="h-4 w-4 text-slate-500" />
                                                             {yearGroup.label}
                                                         </span>
+                                                        {pendingCount > 0 && (
+                                                            <span title={`${pendingCount} pending review${pendingCount > 1 ? 's' : ''}`}>
+                                                                <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {pendingCount}
+                                                                </div>
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent className="mt-2 space-y-2 pl-4">
@@ -466,7 +585,7 @@ export default function AdminReportView({ offices }: Props) {
                                                             >
                                                                 <CollapsibleTrigger asChild>
                                                                     <button
-                                                                        className="flex w-full items-center justify-start rounded-md border border-slate-200 bg-white px-3 py-2 text-left"
+                                                                        className="flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-left"
                                                                         type="button"
                                                                     >
                                                                         <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -476,6 +595,23 @@ export default function AdminReportView({ offices }: Props) {
                                                                             <CalendarDays className="h-4 w-4 text-slate-500" />
                                                                             {monthGroup.label}
                                                                         </span>
+                                                                        <div className="flex shrink-0 items-center gap-1">
+                                                                            {monthGroup.reports.some(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted') && (
+                                                                                <span title="Contains Pending Reports" className="flex items-center justify-center">
+                                                                                    <Clock className="h-4 w-4 text-blue-500" />
+                                                                                </span>
+                                                                            )}
+                                                                            {!monthGroup.reports.some(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted') && monthGroup.reports.some(r => r.reviewStatus === 'rejected') && (
+                                                                                <span title="Contains Rejected Reports" className="flex items-center justify-center">
+                                                                                    <XCircle className="h-4 w-4 text-red-500" />
+                                                                                </span>
+                                                                            )}
+                                                                            {monthGroup.reports.length > 0 && monthGroup.reports.every(r => r.reviewStatus === 'approved') && (
+                                                                                <span title="All Reports Approved" className="flex items-center justify-center">
+                                                                                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                     </button>
                                                                 </CollapsibleTrigger>
                                                                 <CollapsibleContent className="mt-2 space-y-1 pl-4">
@@ -485,7 +621,7 @@ export default function AdminReportView({ offices }: Props) {
                                                                         return (
                                                                             <button
                                                                                 key={reportStateKey}
-                                                                                className={`flex w-full items-center justify-start rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                                                                                className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors ${
                                                                                     isSelected
                                                                                         ? 'border-blue-200 bg-blue-50 text-blue-700'
                                                                                         : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
@@ -496,10 +632,26 @@ export default function AdminReportView({ offices }: Props) {
                                                                                     setSelectedReport(reportGroup);
                                                                                 }}
                                                                             >
-                                                                                <span className="flex items-center gap-2">
-                                                                                    <FileText className="h-4 w-4" />
-                                                                                    {reportGroup.label}
+                                                                                <span className="flex items-center gap-2 overflow-hidden">
+                                                                                    <FileText className="h-4 w-4 shrink-0" />
+                                                                                    <span className="truncate">{reportGroup.label}</span>
                                                                                 </span>
+                                                                                
+                                                                                {reportGroup.reviewStatus === 'approved' && (
+                                                                                    <span title="Approved" className="flex shrink-0 items-center justify-center">
+                                                                                        <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                                                                    </span>
+                                                                                )}
+                                                                                {reportGroup.reviewStatus === 'rejected' && (
+                                                                                    <span title="Rejected" className="flex shrink-0 items-center justify-center">
+                                                                                        <XCircle className="h-4 w-4 text-red-500" />
+                                                                                    </span>
+                                                                                )}
+                                                                                {(reportGroup.reviewStatus === 'submitted' || reportGroup.reviewStatus === 'resubmitted') && (
+                                                                                    <span title="Pending Review" className="flex shrink-0 items-center justify-center">
+                                                                                        <Clock className="h-4 w-4 text-blue-500" />
+                                                                                    </span>
+                                                                                )}
                                                                             </button>
                                                                         );
                                                                     })}
@@ -509,7 +661,7 @@ export default function AdminReportView({ offices }: Props) {
                                                     })}
                                                 </CollapsibleContent>
                                             </Collapsible>
-                                        ))}
+                                        )})}
                                     </div>
                                 )}
                             </div>
@@ -532,6 +684,97 @@ export default function AdminReportView({ offices }: Props) {
                                             </div>
                                         ) : (
                                             <div className="overflow-hidden rounded-md border border-gray-200">
+                                                {/* Approval Panel */}
+                                                <div className="bg-white border-b border-gray-200 p-4">
+                                                    <div className="flex flex-col gap-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <h3 className="text-sm font-semibold text-gray-900">Review Status</h3>
+                                                                <div className="mt-1 flex items-center gap-2">
+                                                                    {selectedReport.reviewStatus === 'approved' && (
+                                                                        <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
+                                                                            <CheckCircle className="mr-1 h-3 w-3" />
+                                                                            Approved
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewStatus === 'rejected' && (
+                                                                        <Badge className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200">
+                                                                            <XCircle className="mr-1 h-3 w-3" />
+                                                                            Rejected
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewStatus === 'submitted' && (
+                                                                        <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
+                                                                            <Clock className="mr-1 h-3 w-3" />
+                                                                            Submitted — Awaiting Review
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewStatus === 'resubmitted' && (
+                                                                        <Badge variant="outline" className="text-violet-700 border-violet-200 bg-violet-50">
+                                                                            <Clock className="mr-1 h-3 w-3" />
+                                                                            Resubmitted — Awaiting Review
+                                                                        </Badge>
+                                                                    )}
+                                                                    {(!selectedReport.reviewStatus || selectedReport.reviewStatus === 'draft') && (
+                                                                        <Badge variant="outline" className="text-gray-600 border-gray-300 bg-gray-50">
+                                                                            Draft — Not Submitted
+                                                                        </Badge>
+                                                                    )}
+                                                                    {selectedReport.reviewedAt && (
+                                                                        <span className="text-xs text-gray-500">
+                                                                            on {formatDate(selectedReport.reviewedAt.split('T')[0])}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                {(selectedReport.reviewStatus === 'approved' || ['submitted', 'resubmitted'].includes(selectedReport.reviewStatus!)) && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                                                        onClick={() => handleReview('rejected')}
+                                                                        disabled={isSubmitting}
+                                                                    >
+                                                                        <XCircle className="mr-2 h-4 w-4" />
+                                                                        Reject
+                                                                    </Button>
+                                                                )}
+                                                                {(selectedReport.reviewStatus === 'rejected' || ['submitted', 'resubmitted'].includes(selectedReport.reviewStatus!)) && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                                                        onClick={() => handleReview('approved')}
+                                                                        disabled={isSubmitting}
+                                                                    >
+                                                                        <CheckCircle className="mr-2 h-4 w-4" />
+                                                                        Approve
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {selectedReport.reviewRemarks ? (
+                                                            <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-700 border border-gray-100">
+                                                                <strong>Remarks:</strong> {selectedReport.reviewRemarks}
+                                                            </div>
+                                                        ) : null}
+
+                                                        {/* Show review controls for submitted/resubmitted */}
+                                                        {selectedReport.reviewStatus && ['submitted', 'resubmitted'].includes(selectedReport.reviewStatus) && (
+                                                            <div className="pt-2">
+                                                                <Textarea
+                                                                    placeholder="Add remarks (optional)..."
+                                                                    value={reviewRemarks}
+                                                                    onChange={(e) => setReviewRemarks(e.target.value)}
+                                                                    className="min-h-[80px] resize-none text-sm"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
                                                 <Table className="text-sm">
                                                     <TableHeader className="bg-gray-50">
                                                         <TableRow className="border-b border-gray-200">

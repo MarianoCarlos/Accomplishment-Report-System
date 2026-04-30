@@ -112,19 +112,17 @@ function formatMonthDay(value: string | null) {
 }
 
 function compareDateDesc(left: string | null, right: string | null) {
-    if (left === right) {
-        return 0;
-    }
-
-    if (!left) {
-        return 1;
-    }
-
-    if (!right) {
-        return -1;
-    }
-
+    if (left === right) return 0;
+    if (!left) return 1;
+    if (!right) return -1;
     return right.localeCompare(left);
+}
+
+function compareDateAsc(left: string | null, right: string | null) {
+    if (left === right) return 0;
+    if (!left) return 1;
+    if (!right) return -1;
+    return left.localeCompare(right);
 }
 
 function getDateParts(value: string | null) {
@@ -238,7 +236,7 @@ function buildYearGroups(member: OfficeMember | null): YearGroup[] {
 
         entriesByMonth.forEach((entries, bucketKey) => {
             const [yearKey, monthKey] = bucketKey.split('-');
-            const sortedEntries = [...entries].sort((a, b) => compareDateDesc(a.date, b.date));
+            const sortedEntries = [...entries].sort((a, b) => compareDateAsc(a.date, b.date));
 
             pushToBucket(yearKey, monthKey, {
                 id: report.id,
@@ -400,20 +398,35 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                             </p>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {assignedOffices.map((office) => (
+                            {assignedOffices.map((office) => {
+                                const pendingCount = office.members.reduce((count, member) => {
+                                    return count + member.reports.filter(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted').length;
+                                }, 0);
+
+                                return (
                                 <Card
                                     key={office.id}
                                     className="cursor-pointer transition-shadow hover:shadow-md"
                                     onClick={() => selectOffice(office)}
                                 >
                                     <CardHeader className="pb-2">
-                                        <div className="flex items-center gap-3">
-                                            <span className="rounded-lg bg-indigo-50 p-2">
-                                                <Building2 className="h-5 w-5 text-indigo-600" />
-                                            </span>
-                                            <CardTitle className="text-base font-semibold">
-                                                {office.name}
-                                            </CardTitle>
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="rounded-lg bg-indigo-50 p-2">
+                                                    <Building2 className="h-5 w-5 text-indigo-600" />
+                                                </span>
+                                                <CardTitle className="text-base font-semibold">
+                                                    {office.name}
+                                                </CardTitle>
+                                            </div>
+                                            {pendingCount > 0 && (
+                                                <span title={`${pendingCount} pending review${pendingCount > 1 ? 's' : ''}`} className="flex shrink-0 items-center justify-center mt-1">
+                                                    <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                        <Clock className="h-3 w-3" />
+                                                        {pendingCount}
+                                                    </div>
+                                                </span>
+                                            )}
                                         </div>
                                     </CardHeader>
                                     <CardContent>
@@ -425,7 +438,7 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))}
+                            )})}
                         </div>
 
                         {assignedOffices.length === 0 && (
@@ -468,7 +481,9 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {selectedOffice.members.map((member, index) => (
+                                    {selectedOffice.members.map((member, index) => {
+                                        const pendingCount = member.reports.filter(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted').length;
+                                        return (
                                         <TableRow
                                             key={member.id}
                                             className={`cursor-pointer border-b border-gray-100 transition-colors last:border-0 hover:bg-blue-50 ${
@@ -478,9 +493,24 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                         >
                                             <TableCell className="h-12 font-medium text-gray-900">{member.name}</TableCell>
                                             <TableCell className="h-12 text-gray-500">{member.email}</TableCell>
-                                            <TableCell className="h-12 text-gray-600">{member.position}</TableCell>
+                                            <TableCell className="h-12 text-gray-600">
+                                                <div className="flex items-center justify-between">
+                                                    <span>{member.position}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        {pendingCount > 0 && (
+                                                            <span title={`${pendingCount} pending review${pendingCount > 1 ? 's' : ''}`}>
+                                                                <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {pendingCount}
+                                                                </div>
+                                                            </span>
+                                                        )}
+                                                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )})}
 
                                     {selectedOffice.members.length === 0 && (
                                         <TableRow>
@@ -520,7 +550,12 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                     <div className="py-8 text-center text-sm text-gray-500">No reports available.</div>
                                 ) : (
                                     <div className="space-y-3 lg:max-h-[calc(100vh-18rem)] lg:overflow-y-auto lg:pr-1">
-                                        {groupedByYear.map((yearGroup) => (
+                                        {groupedByYear.map((yearGroup) => {
+                                            const pendingCount = yearGroup.months.reduce((count, monthGroup) => {
+                                                return count + monthGroup.reports.filter(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted').length;
+                                            }, 0);
+
+                                            return (
                                             <Collapsible
                                                 key={yearGroup.key}
                                                 open={openYears[yearGroup.key] ?? false}
@@ -533,7 +568,7 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                             >
                                                 <CollapsibleTrigger asChild>
                                                     <button
-                                                        className="flex w-full items-center justify-start rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left"
+                                                        className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left"
                                                         type="button"
                                                     >
                                                         <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
@@ -543,6 +578,14 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                             <Folder className="h-4 w-4 text-slate-500" />
                                                             {yearGroup.label}
                                                         </span>
+                                                        {pendingCount > 0 && (
+                                                            <span title={`${pendingCount} pending review${pendingCount > 1 ? 's' : ''}`}>
+                                                                <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {pendingCount}
+                                                                </div>
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent className="mt-2 space-y-2 pl-4">
@@ -562,7 +605,7 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                             >
                                                                 <CollapsibleTrigger asChild>
                                                                     <button
-                                                                        className="flex w-full items-center justify-start rounded-md border border-slate-200 bg-white px-3 py-2 text-left"
+                                                                        className="flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-left"
                                                                         type="button"
                                                                     >
                                                                         <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -572,6 +615,23 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                                             <CalendarDays className="h-4 w-4 text-slate-500" />
                                                                             {monthGroup.label}
                                                                         </span>
+                                                                        <div className="flex shrink-0 items-center gap-1">
+                                                                            {monthGroup.reports.some(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted') && (
+                                                                                <span title="Contains Pending Reports" className="flex items-center justify-center">
+                                                                                    <Clock className="h-4 w-4 text-blue-500" />
+                                                                                </span>
+                                                                            )}
+                                                                            {!monthGroup.reports.some(r => r.reviewStatus === 'submitted' || r.reviewStatus === 'resubmitted') && monthGroup.reports.some(r => r.reviewStatus === 'rejected') && (
+                                                                                <span title="Contains Rejected Reports" className="flex items-center justify-center">
+                                                                                    <XCircle className="h-4 w-4 text-red-500" />
+                                                                                </span>
+                                                                            )}
+                                                                            {monthGroup.reports.length > 0 && monthGroup.reports.every(r => r.reviewStatus === 'approved') && (
+                                                                                <span title="All Reports Approved" className="flex items-center justify-center">
+                                                                                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                     </button>
                                                                 </CollapsibleTrigger>
                                                                 <CollapsibleContent className="mt-2 space-y-1 pl-4">
@@ -622,7 +682,7 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                     })}
                                                 </CollapsibleContent>
                                             </Collapsible>
-                                        ))}
+                                        )})}
                                     </div>
                                 )}
                             </div>
@@ -688,6 +748,32 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                                     )}
                                                                 </div>
                                                             </div>
+                                                            <div className="flex gap-2">
+                                                                {(selectedReport.reviewStatus === 'approved' || ['submitted', 'resubmitted'].includes(selectedReport.reviewStatus!)) && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                                                        onClick={() => handleReview('rejected')}
+                                                                        disabled={isSubmitting}
+                                                                    >
+                                                                        <XCircle className="mr-2 h-4 w-4" />
+                                                                        Reject
+                                                                    </Button>
+                                                                )}
+                                                                {(selectedReport.reviewStatus === 'rejected' || ['submitted', 'resubmitted'].includes(selectedReport.reviewStatus!)) && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                                                        onClick={() => handleReview('approved')}
+                                                                        disabled={isSubmitting}
+                                                                    >
+                                                                        <CheckCircle className="mr-2 h-4 w-4" />
+                                                                        Approve
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
 
                                                         {selectedReport.reviewRemarks ? (
@@ -696,39 +782,15 @@ export default function Team({ assignedOffices }: SupervisorPageProps) {
                                                             </div>
                                                         ) : null}
 
-                                                        {/* Show review controls for submitted/resubmitted/approved/rejected */}
-                                                        {selectedReport.reviewStatus && ['submitted', 'resubmitted', 'approved', 'rejected'].includes(selectedReport.reviewStatus) && (
-                                                            <div className="space-y-3 pt-2">
+                                                        {/* Show review controls for submitted/resubmitted */}
+                                                        {selectedReport.reviewStatus && ['submitted', 'resubmitted'].includes(selectedReport.reviewStatus) && (
+                                                            <div className="pt-2">
                                                                 <Textarea
                                                                     placeholder="Add remarks (optional)..."
                                                                     value={reviewRemarks}
                                                                     onChange={(e) => setReviewRemarks(e.target.value)}
                                                                     className="min-h-[80px] resize-none text-sm"
                                                                 />
-                                                                <div className="flex items-center gap-2">
-                                                                    {selectedReport.reviewStatus !== 'approved' && (
-                                                                        <Button
-                                                                            size="sm"
-                                                                            onClick={() => handleReview('approved')}
-                                                                            disabled={isSubmitting}
-                                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                                                        >
-                                                                            <CheckCircle className="mr-2 h-4 w-4" />
-                                                                            Approve
-                                                                        </Button>
-                                                                    )}
-                                                                    {selectedReport.reviewStatus !== 'rejected' && (
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="destructive"
-                                                                            onClick={() => handleReview('rejected')}
-                                                                            disabled={isSubmitting}
-                                                                        >
-                                                                            <XCircle className="mr-2 h-4 w-4" />
-                                                                            Reject
-                                                                        </Button>
-                                                                    )}
-                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>

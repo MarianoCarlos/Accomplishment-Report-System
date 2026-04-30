@@ -97,6 +97,9 @@ Route::middleware(['auth', 'verified', 'role:Admin'])->group(function () {
     Route::get('/admin/office-report', [AdminReportViewController::class, 'index'])
         ->name('admin.office-report');
 
+    Route::patch('/admin/reports/{report}/review', [AdminReportViewController::class, 'review'])
+        ->name('admin.reports.review');
+
     Route::resource('offices', OfficeController::class);
 
     Route::resource('positions', PositionController::class);

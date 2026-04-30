@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Office;
+use App\Models\Report;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -70,5 +72,29 @@ class AdminReportViewController extends Controller
                 })->values(),
             ])->values(),
         ]);
+    }
+
+    public function review(Request $request, Report $report)
+    {
+        $validated = $request->validate([
+            'review_status' => 'required|in:approved,rejected',
+            'review_remarks' => 'nullable|string|max:1000',
+        ]);
+
+        // Guard: only submitted/resubmitted/approved/rejected reports can be reviewed
+        abort_unless(
+            in_array($report->review_status, ['submitted', 'resubmitted', 'approved', 'rejected']),
+            422,
+            'This report is not available for review.'
+        );
+
+        $report->update([
+            'review_status' => $validated['review_status'],
+            'review_remarks' => $validated['review_remarks'],
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Report review submitted successfully.');
     }
 }
