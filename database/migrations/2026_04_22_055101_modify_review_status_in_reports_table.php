@@ -10,7 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         // Expand the enum to include draft, submitted, resubmitted
-        DB::statement("ALTER TABLE reports MODIFY COLUMN review_status ENUM('draft','submitted','resubmitted','pending','approved','rejected') NOT NULL DEFAULT 'draft'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE reports MODIFY COLUMN review_status ENUM('draft','submitted','resubmitted','pending','approved','rejected') NOT NULL DEFAULT 'draft'");
+        }
 
         // Convert existing 'pending' rows to 'draft'
         DB::table('reports')->where('review_status', 'pending')->update(['review_status' => 'draft']);
@@ -21,6 +23,8 @@ return new class extends Migration
         // Convert back non-standard statuses to 'pending'
         DB::table('reports')->whereIn('review_status', ['draft', 'submitted', 'resubmitted'])->update(['review_status' => 'pending']);
 
-        DB::statement("ALTER TABLE reports MODIFY COLUMN review_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE reports MODIFY COLUMN review_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'");
+        }
     }
 };
