@@ -18,7 +18,7 @@ class AdminReportViewController extends Controller
                 'supervisor:id,name',
                 'alternateSupervisor:id,name',
                 'members' => fn ($query) => $query
-                    ->where('role', 'Employee')
+                    ->whereJsonContains('roles', 'Employee')
                     ->orderBy('name')
                     ->with([
                         'position:id,name',

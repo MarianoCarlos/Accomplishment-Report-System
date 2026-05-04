@@ -15,8 +15,8 @@ class AdminDashboardController extends Controller
     {
         // Summary counts
         $stats = [
-            'totalEmployees'  => User::where('role', 'Employee')->count(),
-            'totalSupervisors' => User::where('role', 'Supervisor')->count(),
+            'totalEmployees'  => User::whereJsonContains('roles', 'Employee')->count(),
+            'totalSupervisors' => User::whereJsonContains('roles', 'Supervisor')->count(),
             'totalOffices'    => Office::count(),
             'totalPositions'  => Position::count(),
         ];

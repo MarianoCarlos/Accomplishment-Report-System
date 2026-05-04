@@ -20,18 +20,26 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+use App\Http\Controllers\RoleSwitchController;
+
 // Fallback dashboard that redirects based on role
 Route::get('dashboard', function () {
-    if (auth()->user()->role === 'Admin') {
+    $activeRole = session('active_role', auth()->user()->role);
+
+    if ($activeRole === 'Admin') {
         return redirect('/admin-dashboard');
     }
 
-    if (auth()->user()->role === 'Supervisor') {
+    if ($activeRole === 'Supervisor') {
         return redirect('/supervisor/dashboard');
     }
 
     return redirect('/accomplishment-report');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::post('/switch-role', [RoleSwitchController::class, 'store'])
+    ->middleware(['auth', 'verified'])
+    ->name('switch-role');
 
 
 

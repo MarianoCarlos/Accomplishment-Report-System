@@ -132,7 +132,7 @@ class SupervisorController extends Controller
             })
             ->with([
                 'members' => fn ($query) => $query
-                    ->where('role', 'Employee')
+                    ->whereJsonContains('roles', 'Employee')
                     ->orderBy('name')
                     ->with([
                         'position:id,name',

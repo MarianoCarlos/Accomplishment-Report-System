@@ -24,7 +24,7 @@ class SupervisorOfficeController extends Controller
 
         return Inertia::render('admin/supervisor-offices', [
             'offices'              => $offices,
-            'supervisors'          => User::where('role', 'Supervisor')->orderBy('name')->get(['id', 'name', 'email']),
+            'supervisors'          => User::whereJsonContains('roles', 'Supervisor')->orderBy('name')->get(['id', 'name', 'email']),
             'assignments'          => Office::whereIn('id', $officeIds)->pluck('supervisor_id', 'id'),
             'alternateAssignments' => Office::whereIn('id', $officeIds)->pluck('alternate_supervisor_id', 'id'),
         ]);
@@ -37,7 +37,7 @@ class SupervisorOfficeController extends Controller
                 'nullable',
                 'integer',
                 function ($attribute, $value, $fail) use ($office) {
-                    if ($value !== null && !User::where('id', $value)->where('role', 'Supervisor')->exists()) {
+                    if ($value !== null && !User::where('id', $value)->whereJsonContains('roles', 'Supervisor')->exists()) {
                         $fail('The selected user is not a supervisor.');
                     }
                     if ($value !== null && $value == $office->alternate_supervisor_id) {
@@ -59,7 +59,7 @@ class SupervisorOfficeController extends Controller
                 'nullable',
                 'integer',
                 function ($attribute, $value, $fail) use ($office) {
-                    if ($value !== null && !User::where('id', $value)->where('role', 'Supervisor')->exists()) {
+                    if ($value !== null && !User::where('id', $value)->whereJsonContains('roles', 'Supervisor')->exists()) {
                         $fail('The selected user is not a supervisor.');
                     }
                     if ($value !== null && $value == $office->supervisor_id) {

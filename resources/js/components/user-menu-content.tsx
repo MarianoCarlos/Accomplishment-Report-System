@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, ArrowRightLeft } from 'lucide-react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -32,6 +32,31 @@ export function UserMenuContent({ user }: Props) {
                 </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {user.available_roles && user.available_roles.length > 1 && (
+                <>
+                    <DropdownMenuGroup>
+                        <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1.5 font-normal">
+                            Switch View
+                        </DropdownMenuLabel>
+                        {user.available_roles.filter(role => role !== user.active_role).map(role => (
+                            <DropdownMenuItem key={role} asChild>
+                                <Link
+                                    className="block w-full cursor-pointer"
+                                    href="/switch-role"
+                                    method="post"
+                                    data={{ role: role }}
+                                    as="button"
+                                    onClick={cleanup}
+                                >
+                                    <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                    Switch to {role}
+                                </Link>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                </>
+            )}
             <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
                     <Link

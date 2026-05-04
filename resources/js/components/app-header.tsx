@@ -89,15 +89,15 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const getInitials = useInitials();
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
-    const navItems = auth.user.role === 'Admin'
+    const navItems = auth.user.active_role === 'Admin'
         ? adminNavItems
-        : auth.user.role === 'Supervisor'
+        : auth.user.active_role === 'Supervisor'
             ? supervisorNavItems
             : userNavItems;
 
-    const homeHref = auth.user.role === 'Admin'
+    const homeHref = auth.user.active_role === 'Admin'
         ? adminDashboard()
-        : auth.user.role === 'Supervisor'
+        : auth.user.active_role === 'Supervisor'
             ? supervisorDashboard()
             : accomplishmentReport();
 
